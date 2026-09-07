@@ -88,7 +88,7 @@ export default function HolderPanel({
         <p className="text-sm text-zinc-500">
           Connect a {token.blockchain === "EVM" ? "Sepolia" : "Hedera"} wallet to pass compliance checks and receive a balance.
         </p>
-        <Button onClick={connect} disabled={connecting} className="self-start">
+        <Button onClick={() => connect()} disabled={connecting} className="self-start">
           {connecting ? "Connecting…" : "Connect wallet"}
         </Button>
       </Card>

@@ -15,7 +15,7 @@ interface EvmWalletContextValue {
   accountId: string | null;
   connecting: boolean;
   error: string | null;
-  connect: () => Promise<void>;
+  connect: (walletType?: any) => Promise<void>;
   disconnect: () => void;
   approveAllowance: (tokenId: string, spender: string, amount: number) => Promise<string>;
 }
@@ -62,19 +62,59 @@ export function EvmWalletProvider({ children }: { children: ReactNode }) {
     return () => ethereum.removeListener?.("accountsChanged", listener);
   }, []);
 
-  const connect = useCallback(async () => {
+  const connect = useCallback(async (walletType?: any) => {
+    const targetWallet = typeof walletType === "string" ? walletType : undefined;
     setConnecting(true);
     setError(null);
     try {
-      const ethereum = window.ethereum as EthereumProvider | undefined;
-      if (!ethereum) throw new Error("Install an EVM wallet such as MetaMask to connect to Sepolia.");
-      await switchToSepolia(ethereum);
-      const accounts = await ethereum.request({ method: "eth_requestAccounts" });
+      let targetProvider: any = typeof window !== "undefined" ? window.ethereum : undefined;
+
+      if (typeof window !== "undefined") {
+        const win = window as any;
+        if (targetWallet === "phantom") {
+          targetProvider = win.phantom?.ethereum || (win.ethereum?.providers?.find((p: any) => p.isPhantom)) || (win.ethereum?.isPhantom ? win.ethereum : null);
+          if (!targetProvider) {
+            window.open("https://phantom.app/", "_blank");
+            throw new Error("Phantom extension not detected. Opening download page...");
+          }
+        } else if (targetWallet === "coinbase") {
+          targetProvider = win.coinbaseWalletExtension || (win.ethereum?.providers?.find((p: any) => p.isCoinbaseWallet)) || (win.ethereum?.isCoinbaseWallet ? win.ethereum : null);
+          if (!targetProvider) {
+            window.open("https://www.coinbase.com/wallet", "_blank");
+            throw new Error("Coinbase Wallet not detected. Opening download page...");
+          }
+        } else if (targetWallet === "brave") {
+          targetProvider = win.ethereum?.isBraveWallet ? win.ethereum : win.ethereum?.providers?.find((p: any) => p.isBraveWallet);
+          if (!targetProvider) {
+            throw new Error("Brave Wallet is only available inside the Brave browser.");
+          }
+        } else if (targetWallet === "rainbow") {
+          targetProvider = win.ethereum?.isRainbow ? win.ethereum : win.ethereum?.providers?.find((p: any) => p.isRainbow);
+          if (!targetProvider) {
+            window.open("https://rainbow.me/", "_blank");
+            throw new Error("Rainbow wallet not detected. Opening download page...");
+          }
+        } else if (targetWallet === "metamask") {
+          targetProvider = win.ethereum?.providers?.find((p: any) => p.isMetaMask && !p.isPhantom && !p.isBraveWallet) || (win.ethereum?.isMetaMask ? win.ethereum : win.ethereum);
+          if (!targetProvider) {
+            window.open("https://metamask.io/download/", "_blank");
+            throw new Error("MetaMask not detected. Opening download page...");
+          }
+        }
+      }
+
+      if (!targetProvider) {
+        window.open("https://metamask.io/download/", "_blank");
+        throw new Error("Install an EVM wallet such as MetaMask or Phantom to connect.");
+      }
+
+      await switchToSepolia(targetProvider);
+      const accounts = await targetProvider.request({ method: "eth_requestAccounts" });
       const first = Array.isArray(accounts) && typeof accounts[0] === "string" ? accounts[0] : null;
       if (!first) throw new Error("The wallet did not return an EVM account.");
       setAccountId(getAddress(first));
     } catch (cause) {
-      const message = cause instanceof Error ? cause.message : "Failed to connect the Sepolia wallet.";
+      const message = cause instanceof Error ? cause.message : "Failed to connect the wallet.";
       setError(message);
     } finally {
       setConnecting(false);
