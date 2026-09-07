@@ -27,11 +27,11 @@ export default function WalletConnectButton() {
       <button
         onClick={evm.accountId ? evm.disconnect : evm.connect}
         disabled={evm.connecting}
-        title={evm.accountId ? "Disconnect Sepolia wallet" : "Connect Sepolia wallet"}
+        title={evm.accountId ? "Disconnect wallet" : "Connect wallet"}
         className={`app-wallet-button ${evm.accountId ? "is-connected" : ""}`}
       >
         {evm.accountId && <span className="app-wallet-dot" aria-hidden="true" />}
-        {evm.connecting ? "Connecting…" : evm.accountId ? shorten(evm.accountId) : "Sepolia"}
+        {evm.connecting ? "Connecting…" : evm.accountId ? shorten(evm.accountId) : "Connect Wallet"}
       </button>
       {(error || evm.error) && <span className="app-wallet-error">{error ?? evm.error}</span>}
     </div>
