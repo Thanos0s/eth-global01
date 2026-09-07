@@ -8,81 +8,73 @@ import WalletConnectButton from "@/components/WalletConnectButton";
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.TOKENIZATION_APP_URL ?? "http://localhost:3000"),
-  title: "Mint & Chill · Agent-operated token marketplace",
+  title: "LiquidityStream-402 · Real-Estate Yield Streaming Engine",
   description:
-    "Discover tokenized assets, prove eligibility, and let Hermes handle distribution across Hedera and Sepolia.",
+    "Decentralized real-estate yield streaming platform powered by Hedera x402, The Graph, and Superfluid.",
   icons: {
     icon: "/brand/logo-512.png",
     apple: "/brand/logo-512.png",
   },
   openGraph: {
-    title: "Mint & Chill",
-    description: "Agent-operated token deployment, eligibility, and distribution.",
+    title: "LiquidityStream-402",
+    description: "Autonomous real-estate yield streaming with Hedera x402, The Graph, and Superfluid.",
     images: ["/brand/banner-16x9.png"],
   },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className="h-full antialiased">
-      <body className="app-shell">
+    <html lang="en" className="h-full antialiased dark">
+      <body className="min-h-screen bg-background font-mono antialiased flex flex-col">
         <WalletProvider>
           <EvmWalletProvider>
-          <header className="app-header">
-            <div className="app-header-inner">
-              <Link href="/" className="app-brand" aria-label="Mint & Chill home">
-                <Image
-                  src="/brand/logo-512.png"
-                  alt=""
-                  width={48}
-                  height={48}
-                  className="app-brand-mark"
-                  priority
-                />
-                <span className="app-brand-copy">
-                  <span className="app-brand-name">
-                    <span className="app-brand-name-long">mint &amp; chill</span>
-                    <span className="app-brand-name-short">m&amp;c</span>
+            <header className="py-5 border-b border-border bg-background/95 backdrop-blur sticky top-0 z-50 font-mono">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Link href="/" className="flex items-center gap-2.5">
+                    <span className="text-xl">⚡</span>
+                    <h1 className="text-lg md:text-xl font-bold font-mono text-foreground tracking-tight">
+                      LiquidityStream-402
+                    </h1>
+                  </Link>
+                  <span className="hidden md:inline-flex text-[11px] px-2.5 py-0.5 rounded font-mono bg-primary/10 text-primary border border-primary/20">
+                    Hedera x402 + Superfluid + The Graph
                   </span>
-                  <span className="app-brand-network">
-                    <span className="app-network-dot" aria-hidden="true" />
-                    Hedera + Sepolia
-                  </span>
-                </span>
-              </Link>
-              <nav className="app-actions" aria-label="Account actions">
-                {/* This link intentionally exits the tokenization app for the parent Hermes admin dashboard. */}
-                <a
-                  href="/hermes?force=1"
-                  className="app-admin-button"
-                  aria-label="Open Hermes admin"
-                >
-                  <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
-                    <path
-                      d="M10 2.7 16 5v4.3c0 3.8-2.5 6.6-6 8-3.5-1.4-6-4.2-6-8V5l6-2.3Z"
-                      stroke="currentColor"
-                      strokeWidth="1.45"
-                      strokeLinejoin="round"
-                    />
-                    <path
-                      d="M7.8 9.8 9.3 11l3-3.2"
-                      stroke="currentColor"
-                      strokeWidth="1.45"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                  Admin
-                </a>
-                <WalletConnectButton />
-              </nav>
-            </div>
-          </header>
-          <main className="app-main">{children}</main>
-          <footer className="app-footer">
-            <span>mint &amp; chill</span>
-            <span>Agent-operated · Hedera + Sepolia</span>
-          </footer>
+                </div>
+                <nav className="flex items-center gap-3" aria-label="Account actions">
+                  <a
+                    href="/hermes?force=1"
+                    className="bg-secondary text-secondary-foreground px-4 py-2 border border-border hover:bg-secondary/80 transition-colors font-mono text-xs font-semibold flex items-center gap-1.5"
+                    aria-label="Open Hermes admin"
+                  >
+                    <span>🤖</span>
+                    <span>Hermes Console</span>
+                  </a>
+                  <WalletConnectButton />
+                </nav>
+              </div>
+            </header>
+            <main className="flex-1">{children}</main>
+            <footer className="border-t border-border py-8 bg-background font-mono text-xs text-muted-foreground mt-auto">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-foreground">LiquidityStream-402</span>
+                  <span>·</span>
+                  <span>Autonomous Real-Estate Yield Streaming Engine</span>
+                </div>
+                <div className="flex items-center gap-4">
+                  <a href="/.well-known/agent-services.json" target="_blank" className="hover:text-foreground transition-colors">
+                    Agent Directory
+                  </a>
+                  <a href="/api/x402/property-oracle" target="_blank" className="hover:text-foreground transition-colors">
+                    x402 Oracle
+                  </a>
+                  <a href="/api/subgraph" target="_blank" className="hover:text-foreground transition-colors">
+                    The Graph
+                  </a>
+                </div>
+              </div>
+            </footer>
           </EvmWalletProvider>
         </WalletProvider>
       </body>

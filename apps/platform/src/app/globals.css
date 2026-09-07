@@ -2,29 +2,46 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  color-scheme: light;
-  --background: #f6f7f2;
-  --foreground: #0b352d;
-  --surface: #fbfcf8;
-  --surface-strong: #ffffff;
-  --muted: #65746d;
-  --line: #dfe5dc;
-  --line-strong: #c5d0c7;
-  --green: #0e5a48;
-  --green-deep: #083e34;
-  --green-soft: #e2f1e8;
-  --mint: #a8dfc3;
-  --lemon: #f4da4d;
-  --lemon-soft: #fff7c8;
-  --violet: #8373bd;
-  --font-display: "Avenir Next", Avenir, "Segoe UI", Helvetica, Arial, sans-serif;
-  --font-product-sans: Inter, "Avenir Next", Avenir, "Segoe UI", Helvetica, Arial, sans-serif;
-  --font-ledger-mono: "SFMono-Regular", "Cascadia Code", Consolas, "Liberation Mono", monospace;
+  color-scheme: dark;
+  --background: #090d16;
+  --foreground: #f8fafc;
+  --surface: #0f172a;
+  --surface-strong: #1e293b;
+  --card: #0f172a;
+  --card-foreground: #f8fafc;
+  --border: #1e293b;
+  --primary: #10b981;
+  --primary-foreground: #ffffff;
+  --secondary: #1e293b;
+  --secondary-foreground: #f8fafc;
+  --muted: #1e293b;
+  --muted-foreground: #94a3b8;
+  --line: #1e293b;
+  --line-strong: #334155;
+  --green: #10b981;
+  --green-deep: #059669;
+  --green-soft: #064e3b;
+  --mint: #34d399;
+  --lemon: #fbbf24;
+  --lemon-soft: #451a03;
+  --violet: #818cf8;
+  --font-display: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+  --font-product-sans: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+  --font-ledger-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-border: var(--border);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
   --font-sans: var(--font-product-sans);
   --font-mono: var(--font-ledger-mono);
 }
@@ -38,8 +55,19 @@ body {
   margin: 0;
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-product-sans);
+  font-family: var(--font-ledger-mono);
   text-rendering: optimizeLegibility;
+}
+
+.ad402-slot {
+  border: 2px dashed #334155;
+  background-color: #090d16;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  box-sizing: border-box;
+  overflow: hidden;
+  position: relative;
+  width: 100%;
 }
 
 button,
@@ -49,7 +77,7 @@ a {
 
 button:focus-visible,
 a:focus-visible {
-  outline: 2px solid var(--green);
+  outline: 2px solid var(--primary);
   outline-offset: 3px;
 }
 
@@ -61,11 +89,11 @@ a:focus-visible {
 
 .app-header {
   position: sticky;
-  z-index: 20;
+  z-index: 40;
   top: 0;
-  border-bottom: 1px solid rgb(197 208 199 / 0.72);
-  background: rgb(250 251 247 / 0.9);
-  backdrop-filter: blur(18px);
+  border-bottom: 1px solid var(--border);
+  background: rgba(9, 13, 22, 0.95);
+  backdrop-filter: blur(16px);
 }
 
 .app-header-inner,
