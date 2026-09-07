@@ -1,4 +1,4 @@
-# LiquidityStream: 5-Minute Hackathon Demo Script
+# Prism 8: 5-Minute Hackathon Demo Script
 **Autonomous Real-Estate Yield Streaming Engine with Hedera x402, Superfluid, & The Graph**
 
 - **Target Audience:** ETHGlobal Judges (Hedera, The Graph, Superfluid, Chainlink tracks)
@@ -10,11 +10,11 @@
 ## ⏱️ Video & Live Demo Breakdown (Total Time: 4:30)
 
 ### [0:00 - 0:45] 1. The Hook: The Agentic Economy's Missing Piece
-* **Screen:** Storefront homepage (`http://localhost:3000/` or deployment URL) showing the **LiquidityStream Engine** banner.
+* **Screen:** Storefront homepage (`http://localhost:3000/` or deployment URL) showing the **Prism 8** dashboard.
 * **Talking Points:**
   > "The agentic economy needs payment rails that move at machine speed—sub-second finality, predictable sub-cent fees, and no smart contract overhead. Hedera is built for this, but autonomous agents have lacked real services to buy without API keys or credit cards.
   >
-  > Today, we introduce **LiquidityStream**: an autonomous real-estate yield streaming engine powered by **Hedera x402**, **The Graph**, **Superfluid CFA**, **Chainlink Functions**, and the **Hermes AI Agent**."
+  > Today, we introduce **Prism 8**: an autonomous real-estate yield streaming engine powered by **Hedera x402**, **The Graph**, **Superfluid CFA**, **Chainlink Functions**, and the **Hermes AI Agent**."
 * **Action:** Highlight the live Agent Discovery Directory link (`/.well-known/agent-services.json`) showing metered machine-readable endpoints.
 
 ---

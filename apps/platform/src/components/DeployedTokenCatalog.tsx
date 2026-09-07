@@ -32,7 +32,7 @@ export default function DeployedTokenCatalog({ tokens }: { tokens: TokenRecord[]
             <span>Hedera x402 · The Graph · Superfluid CFA</span>
           </div>
           <h1 className="text-4xl sm:text-6xl font-mono font-bold text-foreground mb-6 tracking-tight">
-            LiquidityStream-402
+            Prism 8
           </h1>
           <p className="text-lg sm:text-xl font-mono text-muted-foreground mb-8 max-w-3xl mx-auto leading-relaxed">
             The future of decentralized real-estate yield streaming. Autonomous agents discover property oracles, pay per query via Hedera x402, index ownership on The Graph, and stream rental cashflow per-second with Superfluid CFA.

@@ -311,7 +311,7 @@ export function TheGraphInspectorModal({ isOpen, onClose }: TheGraphInspectorMod
                 Aligned with The Graph Track: "One AI track, two ways to build"
               </h4>
               <p className="text-slate-300">
-                LiquidityStream directly satisfies both halves of the track prompt + the featured x402 payment challenge.
+                Prism 8 directly satisfies both halves of the track prompt + the featured x402 payment challenge.
               </p>
             </div>
 
@@ -333,7 +333,7 @@ export function TheGraphInspectorModal({ isOpen, onClose }: TheGraphInspectorMod
               <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-4">
                 <span className="font-bold text-amber-300 text-sm">Autonomous x402 Payment Challenge</span>
                 <p className="mt-1 text-slate-400">
-                  The Graph track prompt asks: <em>"or let your agent pay per query autonomously with x402."</em> LiquidityStream integrates the native Hedera x402 protocol, where the agent pays 0.5 HBAR per request autonomously with Blocky402 facilitator and HCS audit receipts, proving zero-subscription machine commerce.
+                  The Graph track prompt asks: <em>"or let your agent pay per query autonomously with x402."</em> Prism 8 integrates the native Hedera x402 protocol, where the agent pays 0.5 HBAR per request autonomously with Blocky402 facilitator and HCS audit receipts, proving zero-subscription machine commerce.
                 </p>
               </div>
             </div>

@@ -1,10 +1,8 @@
-<p align="center">
-  <img src="brand/banner-16x9.png" alt="LiquidityStream banner" width="100%" />
-</p>
+<!-- Logo / Banner placeholder: user will add later -->
 
-# LiquidityStream — Autonomous Real-Estate Yield Streaming Engine
+# Prism 8 — Autonomous Real-Estate Yield Streaming Engine
 
-**LiquidityStream** turns the Mint & Chill agent-operated RWA platform into a specialized **Real-Estate Yield Streaming Engine**. It combines **Hedera x402** machine-to-machine payments, **Hedera Token Service (HTS)** fractionalization, **Superfluid CFA** per-second yield streaming on Base Sepolia, **The Graph** autonomous indexing & Model Context Protocol (MCP) tooling, and **USPS Chainlink Functions** physical address validation.
+**Prism 8** turns the Mint & Chill agent-operated RWA platform into a specialized **Real-Estate Yield Streaming Engine**. It combines **Hedera x402** machine-to-machine payments, **Hedera Token Service (HTS)** fractionalization, **Superfluid CFA** per-second yield streaming on Base Sepolia, **The Graph** autonomous indexing & Model Context Protocol (MCP) tooling, and **USPS Chainlink Functions** physical address validation.
 
 Built for **ETHGlobal 2026**:
 * **Hedera Track**: Agentic Economy x402 Machine-to-Machine Challenge

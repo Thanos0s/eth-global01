@@ -8,17 +8,12 @@ import WalletConnectButton from "@/components/WalletConnectButton";
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.TOKENIZATION_APP_URL ?? "http://localhost:3000"),
-  title: "LiquidityStream-402 · Real-Estate Yield Streaming Engine",
+  title: "Prism 8 · Real-Estate Yield Streaming Engine",
   description:
     "Decentralized real-estate yield streaming platform powered by Hedera x402, The Graph, and Superfluid.",
-  icons: {
-    icon: "/brand/logo-512.png",
-    apple: "/brand/logo-512.png",
-  },
   openGraph: {
-    title: "LiquidityStream-402",
+    title: "Prism 8",
     description: "Autonomous real-estate yield streaming with Hedera x402, The Graph, and Superfluid.",
-    images: ["/brand/banner-16x9.png"],
   },
 };
 
@@ -32,9 +27,10 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
               <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <Link href="/" className="flex items-center gap-2.5">
-                    <span className="text-xl">⚡</span>
+                    {/* Empty logo container - add logo image here later */}
+                    <div className="w-8 h-8 rounded border border-dashed border-border bg-secondary/50 flex items-center justify-center text-xs text-muted-foreground" aria-label="Logo placeholder" />
                     <h1 className="text-lg md:text-xl font-bold font-mono text-foreground tracking-tight">
-                      LiquidityStream-402
+                      Prism 8
                     </h1>
                   </Link>
                   <span className="hidden md:inline-flex text-[11px] px-2.5 py-0.5 rounded font-mono bg-primary/10 text-primary border border-primary/20">
@@ -58,7 +54,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
             <footer className="border-t border-border py-8 bg-background font-mono text-xs text-muted-foreground mt-auto">
               <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div className="flex items-center gap-2">
-                  <span className="font-bold text-foreground">LiquidityStream-402</span>
+                  <span className="font-bold text-foreground">Prism 8</span>
                   <span>·</span>
                   <span>Autonomous Real-Estate Yield Streaming Engine</span>
                 </div>
