@@ -20,18 +20,43 @@ export async function POST(req: Request) {
       ? { ...input.compliance, kycRequired: true }
       : input.compliance;
 
-    const created = await deployEvmToken({
-      name: input.name,
-      symbol: input.symbol,
-      decimals: input.decimals,
-      initialSupply: input.initialSupply,
-      supplyType: input.supplyType,
-      maxSupply: input.maxSupply,
-      compliance,
-    });
+    let tokenId: string;
+    let txId: string;
+    let explorerUrl: string;
+    let keys: any;
+    let treasuryAccountId = input.treasuryAccountId || getEvmOperatorAddress();
+
+    if (input.existingTokenId && input.createTxId) {
+      tokenId = input.existingTokenId;
+      txId = input.createTxId;
+      explorerUrl = `https://sepolia.etherscan.io/tx/${txId}`;
+      keys = {
+        admin: true,
+        kyc: !!(compliance.kycRequired || compliance.worldIdRequired),
+        freeze: !!compliance.freezeDefault,
+        wipe: !!compliance.wipeEnabled,
+        pause: !!compliance.pauseEnabled,
+        supply: true,
+        feeSchedule: false,
+      };
+    } else {
+      const created = await deployEvmToken({
+        name: input.name,
+        symbol: input.symbol,
+        decimals: input.decimals,
+        initialSupply: input.initialSupply,
+        supplyType: input.supplyType,
+        maxSupply: input.maxSupply,
+        compliance,
+      });
+      tokenId = created.tokenId;
+      txId = created.txId;
+      explorerUrl = created.explorerUrl;
+      keys = created.keys;
+    }
 
     const token = insertToken({
-      id: created.tokenId,
+      id: tokenId,
       blockchain: "EVM",
       network: "sepolia",
       name: input.name,
@@ -41,13 +66,13 @@ export async function POST(req: Request) {
       initialSupply: input.initialSupply,
       supplyType: input.supplyType,
       maxSupply: input.maxSupply,
-      treasuryAccountId: getEvmOperatorAddress(),
+      treasuryAccountId,
       assetCategory: input.assetCategory,
       memo: input.memo,
       compliance,
       customFee: null,
-      keys: created.keys,
-      createTxId: created.txId,
+      keys,
+      createTxId: txId,
     });
 
     insertEvent({
@@ -60,8 +85,8 @@ export async function POST(req: Request) {
         blockchain: "EVM",
         network: "sepolia",
       },
-      txId: created.txId,
-      hashscanUrl: created.explorerUrl,
+      txId,
+      hashscanUrl: explorerUrl,
     });
 
     return NextResponse.json({ token }, { status: 201 });

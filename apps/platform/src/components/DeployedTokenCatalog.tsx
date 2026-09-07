@@ -365,6 +365,9 @@ export default function DeployedTokenCatalog({ tokens }: { tokens: TokenRecord[]
         <PropertyTokenizeModal
           isOpen={isTokenizeOpen}
           onClose={() => setIsTokenizeOpen(false)}
+          onTokenized={() => {
+            window.location.reload();
+          }}
         />
 
         <TheGraphInspectorModal

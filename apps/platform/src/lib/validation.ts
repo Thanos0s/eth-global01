@@ -114,6 +114,10 @@ export const createTokenSchema = z
     memo: z.string().trim().max(100).optional(),
     compliance: complianceSchema,
     customFee: customFeeSchema.optional(),
+    existingTokenId: z.string().optional(),
+    createTxId: z.string().optional(),
+    treasuryAccountId: z.string().optional(),
+    walletSignature: z.string().optional(),
   })
   .refine((v) => v.supplyType === "INFINITE" || !!v.maxSupply, {
     message: "maxSupply is required for a finite supply token",
