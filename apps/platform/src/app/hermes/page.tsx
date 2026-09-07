@@ -12,32 +12,42 @@ interface LogEntry {
   data?: any;
 }
 
+const INITIAL_LOGS: LogEntry[] = [
+  {
+    id: "init-1",
+    timestamp: "00:00:01",
+    source: "HERMES",
+    content: "Hermes Agent daemon initialized. Workdir: /data/.hermes/workspace. Loaded AGENTS.md instructions.",
+  },
+  {
+    id: "init-2",
+    timestamp: "00:00:02",
+    source: "MCP",
+    content: "6 MCP servers connected: subgraph_read, subgraph_write, hedera_read, hedera_write, evm_read, evm_write, usps_chainlink, worldid.",
+  },
+  {
+    id: "init-3",
+    timestamp: "00:00:03",
+    source: "HCS",
+    content: "Hedera Consensus Service listening on Topic 0.0.4491823. HIP-423 scheduler ready.",
+  },
+];
+
 export default function HermesConsolePage() {
   const [activeProfile, setActiveProfile] = useState<"default" | "pr">("default");
   const [inputCommand, setInputCommand] = useState("");
   const [isExecuting, setIsExecuting] = useState(false);
-  const [logs, setLogs] = useState<LogEntry[]>([
-    {
-      id: "init-1",
-      timestamp: new Date().toLocaleTimeString(),
-      source: "HERMES",
-      content: "Hermes Agent daemon initialized. Workdir: /data/.hermes/workspace. Loaded AGENTS.md instructions.",
-    },
-    {
-      id: "init-2",
-      timestamp: new Date().toLocaleTimeString(),
-      source: "MCP",
-      content: "6 MCP servers connected: subgraph_read, subgraph_write, hedera_read, hedera_write, evm_read, evm_write, usps_chainlink, worldid.",
-    },
-    {
-      id: "init-3",
-      timestamp: new Date().toLocaleTimeString(),
-      source: "HCS",
-      content: "Hedera Consensus Service listening on Topic 0.0.4491823. HIP-423 scheduler ready.",
-    },
-  ]);
+  const [logs, setLogs] = useState<LogEntry[]>(INITIAL_LOGS);
 
   const terminalEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // Stamp initial logs with client-side local time after hydration to avoid SSR mismatch
+    const now = new Date().toLocaleTimeString();
+    setLogs((prev) =>
+      prev.map((l) => (l.id.startsWith("init-") ? { ...l, timestamp: now } : l))
+    );
+  }, []);
 
   useEffect(() => {
     terminalEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -332,7 +342,9 @@ export default function HermesConsolePage() {
             {logs.map((log) => (
               <div key={log.id} className="leading-relaxed border-b border-neutral-100 pb-2.5">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="text-neutral-400 text-[10px]">{log.timestamp}</span>
+                  <span className="text-neutral-400 text-[10px]" suppressHydrationWarning>
+                    {log.timestamp}
+                  </span>
                   <span
                     className={`text-[10px] px-1.5 py-0.2 font-bold border ${
                       log.source === "OPERATOR"
