@@ -7,6 +7,7 @@ import type { TokenRecord } from "@/types";
 import { InvestorStreamDashboard } from "./InvestorStreamDashboard";
 import { RentSimulatorPanel } from "./RentSimulatorPanel";
 import { PropertyTokenizeModal } from "./PropertyTokenizeModal";
+import { TheGraphInspectorModal } from "./TheGraphInspectorModal";
 
 const ACCENTS = [
   {
@@ -80,6 +81,7 @@ function tokenControls(token: TokenRecord) {
 
 export default function DeployedTokenCatalog({ tokens }: { tokens: TokenRecord[] }) {
   const [isTokenizeOpen, setIsTokenizeOpen] = useState(false);
+  const [isGraphOpen, setIsGraphOpen] = useState(false);
 
   return (
     <>
@@ -101,13 +103,23 @@ export default function DeployedTokenCatalog({ tokens }: { tokens: TokenRecord[]
             </p>
           </div>
 
-          <button
-            onClick={() => setIsTokenizeOpen(true)}
-            className="rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 px-6 py-3.5 text-sm font-bold text-slate-950 shadow-xl shadow-emerald-500/20 hover:brightness-110 active:scale-95 transition-all flex items-center gap-2.5 cursor-pointer"
-          >
-            <span className="text-base">🏢</span>
-            <span>Tokenize Property (x402)</span>
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setIsGraphOpen(true)}
+              className="rounded-2xl border border-purple-500/40 bg-purple-950/40 px-5 py-3.5 text-sm font-bold text-purple-300 hover:bg-purple-900/50 hover:text-white transition-all flex items-center gap-2 cursor-pointer shadow-lg shadow-purple-950/40"
+            >
+              <span className="text-base">📊</span>
+              <span>The Graph AI Inspector</span>
+            </button>
+
+            <button
+              onClick={() => setIsTokenizeOpen(true)}
+              className="rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 px-6 py-3.5 text-sm font-bold text-slate-950 shadow-xl shadow-emerald-500/20 hover:brightness-110 active:scale-95 transition-all flex items-center gap-2.5 cursor-pointer"
+            >
+              <span className="text-base">🏢</span>
+              <span>Tokenize Property (x402)</span>
+            </button>
+          </div>
         </div>
 
         {/* Live Demo Dashboard Grid */}
@@ -132,6 +144,11 @@ export default function DeployedTokenCatalog({ tokens }: { tokens: TokenRecord[]
       <PropertyTokenizeModal
         isOpen={isTokenizeOpen}
         onClose={() => setIsTokenizeOpen(false)}
+      />
+
+      <TheGraphInspectorModal
+        isOpen={isGraphOpen}
+        onClose={() => setIsGraphOpen(false)}
       />
 
       <div className="rwa-catalog-head is-page-start" id="instruments">
