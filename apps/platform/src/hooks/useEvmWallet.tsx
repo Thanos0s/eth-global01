@@ -104,15 +104,29 @@ export function EvmWalletProvider({ children }: { children: ReactNode }) {
       }
 
       if (!targetProvider) {
+        targetProvider = typeof window !== "undefined" ? (window as any).ethereum : undefined;
+      }
+
+      if (!targetProvider) {
         window.open("https://metamask.io/download/", "_blank");
         throw new Error("Install an EVM wallet such as MetaMask or Phantom to connect.");
       }
 
-      await switchToSepolia(targetProvider);
+      // 1. Request account authorization first to establish connection & origin session
       const accounts = await targetProvider.request({ method: "eth_requestAccounts" });
       const first = Array.isArray(accounts) && typeof accounts[0] === "string" ? accounts[0] : null;
       if (!first) throw new Error("The wallet did not return an EVM account.");
       setAccountId(getAddress(first));
+
+      // 2. Switch to Sepolia if needed, without failing connection if user declines switch
+      try {
+        const currentChainId = await targetProvider.request({ method: "eth_chainId" });
+        if (currentChainId !== SEPOLIA_CHAIN_ID_HEX) {
+          await switchToSepolia(targetProvider);
+        }
+      } catch (chainErr) {
+        console.warn("Could not switch to Sepolia network automatically:", chainErr);
+      }
     } catch (cause) {
       const message = cause instanceof Error ? cause.message : "Failed to connect the wallet.";
       setError(message);
