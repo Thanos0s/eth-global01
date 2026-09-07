@@ -91,105 +91,105 @@ export function PropertyTokenizeModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-      <div className="w-full max-w-lg rounded-2xl border border-slate-700 bg-slate-900 p-6 text-white shadow-2xl relative">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+      <div className="w-full max-w-lg rounded-2xl border border-neutral-300 bg-white p-6 text-black shadow-2xl relative">
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-slate-400 hover:text-white text-lg font-bold"
+          className="absolute top-4 right-4 text-neutral-400 hover:text-black text-lg font-bold cursor-pointer"
         >
           ✕
         </button>
 
         <div className="flex items-center gap-2 mb-1">
-          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="text-xs font-semibold uppercase tracking-wider text-emerald-400">
+          <span className="w-2.5 h-2.5 rounded-full bg-black animate-pulse" />
+          <span className="text-xs font-semibold uppercase tracking-wider text-black">
             Hedera x402 + USPS Oracle
           </span>
         </div>
-        <h3 className="text-xl font-bold text-slate-100 mb-1">Tokenize Physical Real Estate</h3>
-        <p className="text-xs text-slate-400 mb-5">
+        <h3 className="text-xl font-bold text-black mb-1">Tokenize Physical Real Estate</h3>
+        <p className="text-xs text-neutral-600 mb-5 font-mono">
           Verify physical deliverability with USPS via machine-to-machine x402 payment before minting HTS shares.
         </p>
 
         <div className="space-y-3.5 text-xs">
           <div>
-            <label className="block text-slate-400 mb-1 font-medium">Street Address</label>
+            <label className="block text-neutral-700 mb-1 font-medium font-mono">Street Address</label>
             <input
               type="text"
               value={street}
               onChange={(e) => setStreet(e.target.value)}
-              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3.5 py-2 text-white font-mono placeholder-slate-500 focus:border-emerald-500 focus:outline-none"
+              className="w-full rounded-xl border border-neutral-300 bg-neutral-50 px-3.5 py-2 text-black font-mono placeholder-neutral-400 focus:border-black focus:outline-none"
             />
           </div>
 
           <div className="grid grid-cols-3 gap-2">
             <div>
-              <label className="block text-slate-400 mb-1 font-medium">City</label>
+              <label className="block text-neutral-700 mb-1 font-medium font-mono">City</label>
               <input
                 type="text"
                 value={city}
                 onChange={(e) => setCity(e.target.value)}
-                className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-white font-mono"
+                className="w-full rounded-xl border border-neutral-300 bg-neutral-50 px-3 py-2 text-black font-mono focus:border-black focus:outline-none"
               />
             </div>
             <div>
-              <label className="block text-slate-400 mb-1 font-medium">State</label>
+              <label className="block text-neutral-700 mb-1 font-medium font-mono">State</label>
               <input
                 type="text"
                 value={state}
                 onChange={(e) => setState(e.target.value)}
-                className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-white font-mono"
+                className="w-full rounded-xl border border-neutral-300 bg-neutral-50 px-3 py-2 text-black font-mono focus:border-black focus:outline-none"
               />
             </div>
             <div>
-              <label className="block text-slate-400 mb-1 font-medium">ZIP</label>
+              <label className="block text-neutral-700 mb-1 font-medium font-mono">ZIP</label>
               <input
                 type="text"
                 value={zip}
                 onChange={(e) => setZip(e.target.value)}
-                className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-white font-mono"
+                className="w-full rounded-xl border border-neutral-300 bg-neutral-50 px-3 py-2 text-black font-mono focus:border-black focus:outline-none"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3 pt-1">
             <div>
-              <label className="block text-slate-400 mb-1 font-medium">Monthly Rent ($ USD)</label>
+              <label className="block text-neutral-700 mb-1 font-medium font-mono">Monthly Rent ($ USD)</label>
               <input
                 type="number"
                 value={monthlyRent}
                 onChange={(e) => setMonthlyRent(Number(e.target.value))}
-                className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3.5 py-2 text-white font-mono"
+                className="w-full rounded-xl border border-neutral-300 bg-neutral-50 px-3.5 py-2 text-black font-mono focus:border-black focus:outline-none"
               />
             </div>
             <div>
-              <label className="block text-slate-400 mb-1 font-medium">Fractional HTS Shares</label>
+              <label className="block text-neutral-700 mb-1 font-medium font-mono">Fractional HTS Shares</label>
               <input
                 type="number"
                 value={shares}
                 onChange={(e) => setShares(Number(e.target.value))}
-                className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3.5 py-2 text-white font-mono"
+                className="w-full rounded-xl border border-neutral-300 bg-neutral-50 px-3.5 py-2 text-black font-mono focus:border-black focus:outline-none"
               />
             </div>
           </div>
         </div>
 
         {verificationStep && (
-          <div className="mt-4 p-3 rounded-xl bg-slate-950 border border-slate-800 font-mono text-[11px] text-emerald-400 flex items-center gap-2">
-            <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+          <div className="mt-4 p-3 rounded-xl bg-neutral-100 border border-neutral-300 font-mono text-[11px] text-black flex items-center gap-2">
+            <span className="inline-block w-2 h-2 rounded-full bg-black animate-ping" />
             <span>{verificationStep}</span>
           </div>
         )}
 
         {verificationResult && (
-          <div className="mt-4 rounded-xl bg-emerald-950/30 border border-emerald-500/50 p-3.5 text-xs text-slate-200 space-y-2">
-            <div className="flex items-center justify-between font-semibold text-emerald-400">
+          <div className="mt-4 rounded-xl bg-neutral-50 border border-neutral-300 p-3.5 text-xs text-neutral-800 space-y-2 font-mono">
+            <div className="flex items-center justify-between font-semibold text-black">
               <span>✓ USPS DPV Verified: {verificationResult.standardizedAddress?.street}</span>
-              <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px]">
+              <span className="px-2 py-0.5 rounded bg-neutral-200 text-black text-[10px] border border-neutral-300">
                 CODE {verificationResult.dpvConfirmation}
               </span>
             </div>
-            <p className="text-[11px] text-slate-400 font-mono">
+            <p className="text-[11px] text-neutral-600 font-mono">
               Hash: {verificationResult.addressHash?.slice(0, 20)}...
             </p>
             <HcsAuditBadge
@@ -201,22 +201,22 @@ export function PropertyTokenizeModal({
         )}
 
         {error && (
-          <div className="mt-3 p-2.5 bg-rose-950/40 border border-rose-800 rounded-lg text-xs text-rose-300">
+          <div className="mt-3 p-2.5 bg-neutral-100 border border-neutral-400 rounded-lg text-xs text-black font-mono">
             {error}
           </div>
         )}
 
-        <div className="mt-6 flex items-center justify-end gap-3 border-t border-slate-800 pt-4">
+        <div className="mt-6 flex items-center justify-end gap-3 border-t border-neutral-300 pt-4">
           <button
             onClick={onClose}
-            className="rounded-xl border border-slate-700 px-4 py-2.5 text-xs font-medium text-slate-400 hover:text-white transition-colors"
+            className="rounded-xl border border-neutral-300 bg-white px-4 py-2.5 text-xs font-medium text-neutral-700 hover:text-black hover:border-black transition-colors cursor-pointer"
           >
             Cancel
           </button>
           <button
             onClick={handleVerifyAndTokenize}
             disabled={isVerifying}
-            className="rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-5 py-2.5 text-xs font-semibold text-white shadow-lg hover:from-emerald-500 hover:to-teal-500 disabled:opacity-50 transition-all flex items-center gap-2"
+            className="rounded-xl bg-black px-5 py-2.5 text-xs font-semibold text-white border border-black hover:bg-neutral-800 disabled:opacity-50 transition-all flex items-center gap-2 cursor-pointer"
           >
             {isVerifying ? "Executing x402 Handshake..." : "Verify & Deploy HTS Token"}
           </button>

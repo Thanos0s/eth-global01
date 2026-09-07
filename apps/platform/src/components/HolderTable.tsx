@@ -40,7 +40,7 @@ export default function HolderTable({ token, holders }: { token: TokenRecord; ho
         <div className="overflow-x-auto -mx-4 sm:-mx-5">
           <table className="w-full text-sm min-w-[900px]">
             <thead>
-              <tr className="text-left text-xs uppercase tracking-wide text-zinc-500 border-b border-zinc-200 dark:border-zinc-800">
+              <tr className="text-left text-xs uppercase tracking-wide text-neutral-600 border-b border-neutral-300">
                 <th className="py-2 px-4 sm:px-5 font-medium">Account</th>
                 <th className="py-2 px-2 font-medium">Associated</th>
                 {token.compliance.kycRequired && <th className="py-2 px-2 font-medium">KYC</th>}
@@ -61,7 +61,7 @@ export default function HolderTable({ token, holders }: { token: TokenRecord; ho
                 const canReclaim = token.keys.wipe || holder.allowanceGranted;
 
                 return (
-                  <tr key={key} className="border-b border-zinc-100 dark:border-zinc-900 last:border-none">
+                  <tr key={key} className="border-b border-neutral-200 last:border-none">
                     <td className="py-2.5 px-4 sm:px-5 font-mono text-xs">{holder.accountId}</td>
                     <td className="py-2.5 px-2">{holder.associated ? <Dot ok /> : <Dot />}</td>
                     {token.compliance.kycRequired && <td className="py-2.5 px-2">{holder.kycGranted ? <Dot ok /> : <Dot />}</td>}
@@ -134,7 +134,7 @@ export default function HolderTable({ token, holders }: { token: TokenRecord; ho
 }
 
 function Dot({ ok = false }: { ok?: boolean }) {
-  return <span className={`inline-block h-2.5 w-2.5 rounded-full ${ok ? "bg-emerald-500" : "bg-zinc-300 dark:bg-zinc-700"}`} />;
+  return <span className={`inline-block h-2.5 w-2.5 rounded-full ${ok ? "bg-black" : "bg-neutral-300"}`} />;
 }
 
 function StatusBadge({ status }: { status: HolderRecord["status"] }) {

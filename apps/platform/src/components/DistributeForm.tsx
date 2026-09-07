@@ -65,7 +65,7 @@ export default function DistributeForm({ token, holders }: { token: TokenRecord;
         </div>
       )}
       <ErrorText>{error}</ErrorText>
-      {ok && <p className="text-sm text-emerald-600 dark:text-emerald-400">{ok}</p>}
+      {ok && <p className="text-sm text-black font-mono">{ok}</p>}
     </Card>
   );
 }

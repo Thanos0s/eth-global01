@@ -255,7 +255,7 @@ export default function HolderPanel({
       )}
 
       <ErrorText>{error}</ErrorText>
-      {notice && <p className="text-sm text-amber-700 dark:text-amber-300">{notice}</p>}
+      {notice && <p className="text-sm text-black font-mono">{notice}</p>}
     </Card>
   );
 }
@@ -267,28 +267,28 @@ function WorldIdVerificationNote({
   verification: WorldIdVerificationRecord | null;
   fallback: string;
 }) {
-  if (!verification) return <span className="text-xs text-zinc-500">{fallback}</span>;
+  if (!verification) return <span className="text-xs text-neutral-500 font-mono">{fallback}</span>;
   if (verification.status === "PENDING") {
-    return <span className="text-xs text-violet-700">Proof ready for Hermes verification.</span>;
+    return <span className="text-xs text-neutral-700 font-mono">Proof ready for Hermes verification.</span>;
   }
   if (verification.status === "PROCESSING") {
-    return <span className="text-xs text-violet-700">Hermes is checking this proof with World…</span>;
+    return <span className="text-xs text-neutral-700 font-mono">Hermes is checking this proof with World…</span>;
   }
   if (verification.status === "FAILED") {
     return (
-      <span className="text-xs text-amber-700">
+      <span className="text-xs text-black font-mono">
         World was temporarily unavailable. Hermes can retry this proof.
       </span>
     );
   }
   if (verification.status === "REJECTED") {
     return (
-      <span className="text-xs text-red-600">
+      <span className="text-xs text-black font-mono">
         {verification.errorDetail ?? "World rejected this proof. Please complete a new check."}
       </span>
     );
   }
-  return <span className="text-xs text-emerald-700">Verified by Hermes through World.</span>;
+  return <span className="text-xs text-black font-mono">Verified by Hermes through World.</span>;
 }
 
 function identityCheckLabel(token: TokenRecord): string {
@@ -320,7 +320,7 @@ function TokenRequestAction({
         href={request.fulfillmentHashscanUrl}
         target="_blank"
         rel="noreferrer"
-        className="text-sm font-medium text-emerald-700 hover:underline dark:text-emerald-300"
+        className="text-sm font-medium text-black hover:underline font-mono"
       >
         View transfer ↗
       </a>
@@ -358,13 +358,13 @@ function TokenRequestAction({
 }
 
 function TokenRequestSummary({ request }: { request: TokenRequestRecord | null }) {
-  if (!request) return <span className="text-xs text-zinc-500">Hermes reviews and sends from treasury.</span>;
+  if (!request) return <span className="text-xs text-neutral-500 font-mono">Hermes reviews and sends from treasury.</span>;
   if (request.status === "FULFILLED") {
-    return <span className="text-xs text-emerald-700 dark:text-emerald-300">1 token sent.</span>;
+    return <span className="text-xs text-black font-mono">1 token sent.</span>;
   }
   if (request.status === "REJECTED") {
     return (
-      <span className="text-xs text-red-600 dark:text-red-400">
+      <span className="text-xs text-black font-mono">
         {request.rejectionReason ?? "Hermes rejected this request."}
       </span>
     );
@@ -372,24 +372,24 @@ function TokenRequestSummary({ request }: { request: TokenRequestRecord | null }
   if (request.status === "PROCESSING") {
     if (request.processingError) {
       return (
-        <span className="text-xs text-red-600 dark:text-red-400">
+        <span className="text-xs text-black font-mono">
           Transfer result is uncertain; operator review required.
         </span>
       );
     }
-    return <span className="text-xs text-violet-600 dark:text-violet-300">Transfer in progress…</span>;
+    return <span className="text-xs text-neutral-700 font-mono">Transfer in progress…</span>;
   }
   if (request.processingError) {
     return (
-      <span className="text-xs text-amber-700 dark:text-amber-300">
+      <span className="text-xs text-black font-mono">
         Last on-chain attempt failed safely; retry Hermes.
       </span>
     );
   }
   if (request.triggerStatus === "FAILED") {
-    return <span className="text-xs text-amber-700 dark:text-amber-300">Saved; Hermes needs a retry.</span>;
+    return <span className="text-xs text-neutral-700 font-mono">Saved; Hermes needs a retry.</span>;
   }
-  return <span className="text-xs text-zinc-500">Hermes is reviewing the request…</span>;
+  return <span className="text-xs text-neutral-500 font-mono">Hermes is reviewing the request…</span>;
 }
 
 function ChecklistRow({
@@ -404,10 +404,10 @@ function ChecklistRow({
   extra?: React.ReactNode;
 }) {
   return (
-    <div className="flex items-center justify-between gap-3 border-t border-zinc-100 dark:border-zinc-800 pt-3 first:border-none first:pt-0">
+    <div className="flex items-center justify-between gap-3 border-t border-neutral-200 pt-3 first:border-none first:pt-0">
       <div className="flex flex-col">
-        <span className="text-sm flex items-center gap-2">
-          <span className={`h-1.5 w-1.5 rounded-full ${done ? "bg-emerald-500" : "bg-zinc-300 dark:bg-zinc-700"}`} />
+        <span className="text-sm flex items-center gap-2 font-mono text-black">
+          <span className={`h-1.5 w-1.5 rounded-full ${done ? "bg-black" : "bg-neutral-300"}`} />
           {label}
         </span>
         {extra}
@@ -425,12 +425,12 @@ function StatusBadge({ status }: { status: HolderRecord["status"] }) {
 
 function LivenessSummary({ holder, periodSeconds }: { holder: HolderRecord; periodSeconds?: number }) {
   if (!holder.lastCheckinAt || !periodSeconds) {
-    return <span className="text-xs text-zinc-500">The first verified selfie starts the renewal period.</span>;
+    return <span className="text-xs text-neutral-500 font-mono">The first verified selfie starts the renewal period.</span>;
   }
   const last = new Date(holder.lastCheckinAt).toLocaleString();
   const deadline = new Date(new Date(holder.lastCheckinAt).getTime() + periodSeconds * 1000).toLocaleString();
   return (
-    <span className={`text-xs ${holder.livenessState === "EXPIRED" ? "text-red-600" : "text-zinc-500"}`}>
+    <span className={`text-xs font-mono ${holder.livenessState === "EXPIRED" ? "text-black font-bold" : "text-neutral-600"}`}>
       Selfie verified {last} · renew by {deadline}
       {holder.livenessState === "EXPIRED" && " · expired; automatic return is processing"}
       {holder.livenessReclaimError && ` · return failed: ${holder.livenessReclaimError}`}

@@ -60,62 +60,62 @@ export function InvestorStreamDashboard({
   };
 
   return (
-    <div className="rounded-2xl border border-emerald-500/30 bg-slate-950 p-6 text-white shadow-xl shadow-emerald-950/20 backdrop-blur-xl">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-4">
+    <div className="rounded-2xl border border-neutral-300 bg-white p-6 text-black shadow-lg">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-neutral-200 pb-4">
         <div>
           <div className="flex items-center gap-2">
             <span className="relative flex h-3 w-3">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex h-3 w-3 rounded-full bg-emerald-500"></span>
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-black opacity-75"></span>
+              <span className="relative inline-flex h-3 w-3 rounded-full bg-black"></span>
             </span>
-            <span className="text-xs font-semibold uppercase tracking-wider text-emerald-400">
+            <span className="text-xs font-semibold uppercase tracking-wider text-black">
               Active Superfluid CFA Stream
             </span>
           </div>
-          <h3 className="mt-1 text-lg font-bold text-slate-100">{propertyAddress}</h3>
+          <h3 className="mt-1 text-lg font-bold text-black">{propertyAddress}</h3>
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="rounded-full bg-emerald-950/60 px-3 py-1 text-xs font-mono text-emerald-300 border border-emerald-700/50">
+          <span className="rounded-full bg-neutral-100 px-3 py-1 text-xs font-mono text-black border border-neutral-300">
             Base Sepolia (fUSDCx)
           </span>
-          <span className="rounded-full bg-indigo-950/60 px-3 py-1 text-xs font-mono text-indigo-300 border border-indigo-700/50">
+          <span className="rounded-full bg-neutral-100 px-3 py-1 text-xs font-mono text-neutral-600 border border-neutral-300">
             Hedera HTS (Shares)
           </span>
         </div>
       </div>
 
       {/* Main Streaming Ticker Counter */}
-      <div className="my-6 rounded-xl bg-gradient-to-br from-slate-900 via-slate-900 to-emerald-950/30 p-6 border border-slate-800 text-center relative overflow-hidden">
+      <div className="my-6 rounded-xl bg-neutral-50 p-6 border border-neutral-300 text-center relative overflow-hidden">
         <div className="absolute top-0 right-0 p-3 opacity-10">
-          <svg className="w-24 h-24 text-emerald-400" fill="currentColor" viewBox="0 0 24 24">
+          <svg className="w-24 h-24 text-black" fill="currentColor" viewBox="0 0 24 24">
             <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
           </svg>
         </div>
 
-        <span className="text-xs uppercase tracking-widest text-slate-400 font-medium">
+        <span className="text-xs uppercase tracking-widest text-neutral-500 font-medium">
           Accrued Rental Yield (Real-Time)
         </span>
-        <div className="mt-2 text-4xl sm:text-5xl font-mono font-extrabold tracking-tight text-emerald-400 drop-shadow-sm">
+        <div className="mt-2 text-4xl sm:text-5xl font-mono font-extrabold tracking-tight text-black">
           ${currentYield.toFixed(6)}
         </div>
 
-        <div className="mt-4 flex flex-wrap justify-center items-center gap-6 text-xs text-slate-300 font-mono">
+        <div className="mt-4 flex flex-wrap justify-center items-center gap-6 text-xs text-neutral-700 font-mono">
           <div>
-            <span className="text-slate-400 block text-[11px]">Flow Rate</span>
-            <span className="text-emerald-300 font-semibold">
+            <span className="text-neutral-500 block text-[11px]">Flow Rate</span>
+            <span className="text-black font-bold">
               +${flowRatePerSec.toFixed(8)} / sec
             </span>
           </div>
-          <div className="h-4 w-px bg-slate-700" />
+          <div className="h-4 w-px bg-neutral-300" />
           <div>
-            <span className="text-slate-400 block text-[11px]">Your Share ({sharePercentage}%)</span>
-            <span className="text-slate-200 font-semibold">${investorMonthlyRent.toFixed(2)} / mo</span>
+            <span className="text-neutral-500 block text-[11px]">Your Share ({sharePercentage}%)</span>
+            <span className="text-black font-semibold">${investorMonthlyRent.toFixed(2)} / mo</span>
           </div>
-          <div className="h-4 w-px bg-slate-700" />
+          <div className="h-4 w-px bg-neutral-300" />
           <div>
-            <span className="text-slate-400 block text-[11px]">Total Property Rent</span>
-            <span className="text-slate-200 font-semibold">${monthlyRent.toLocaleString()} / mo</span>
+            <span className="text-neutral-500 block text-[11px]">Total Property Rent</span>
+            <span className="text-black font-semibold">${monthlyRent.toLocaleString()} / mo</span>
           </div>
         </div>
       </div>
@@ -126,7 +126,7 @@ export function InvestorStreamDashboard({
           <button
             onClick={handleClaim}
             disabled={isClaiming || currentYield <= 0.0001}
-            className="flex-1 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-900/30 hover:from-emerald-500 hover:to-teal-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all transform active:scale-[0.99] flex items-center justify-center gap-2"
+            className="flex-1 rounded-xl bg-black px-5 py-3 text-sm font-semibold text-white border border-black hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all transform active:scale-[0.99] flex items-center justify-center gap-2 cursor-pointer"
           >
             {isClaiming ? (
               <>
@@ -143,14 +143,14 @@ export function InvestorStreamDashboard({
 
           <button
             onClick={() => setIsStreaming(!isStreaming)}
-            className="rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-xs font-medium text-slate-300 hover:bg-slate-800 transition-colors"
+            className="rounded-xl border border-neutral-300 bg-white px-4 py-3 text-xs font-medium text-black hover:bg-neutral-100 transition-colors cursor-pointer"
           >
             {isStreaming ? "Pause Stream View" : "Resume Stream"}
           </button>
         </div>
 
         {claimSuccess && (
-          <div className="p-3 bg-emerald-900/30 border border-emerald-500/50 rounded-xl text-xs text-emerald-300 text-center animate-fade-in">
+          <div className="p-3 bg-neutral-100 border border-neutral-300 rounded-xl text-xs text-black text-center animate-fade-in font-mono">
             ✓ Successfully claimed yield! Settled via Hedera Scheduled Transaction.
           </div>
         )}

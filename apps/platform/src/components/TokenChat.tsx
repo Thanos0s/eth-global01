@@ -124,10 +124,10 @@ export default function TokenChat({ token }: { token: TokenRecord }) {
           {messages.map((message, i) => (
             <div
               key={i}
-              className={`text-sm rounded-lg px-3 py-2 max-w-[85%] whitespace-pre-wrap ${
+              className={`text-sm rounded-lg px-3 py-2 max-w-[85%] whitespace-pre-wrap font-mono ${
                 message.role === "user"
-                  ? "self-end bg-zinc-900 text-white dark:bg-white dark:text-zinc-900"
-                  : "self-start bg-zinc-100 dark:bg-zinc-800"
+                  ? "self-end bg-black text-white border border-black"
+                  : "self-start bg-neutral-100 text-black border border-neutral-300"
               }`}
             >
               {message.content || (busy && i === messages.length - 1 ? "…" : "")}

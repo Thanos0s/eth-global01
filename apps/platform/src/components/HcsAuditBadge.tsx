@@ -28,51 +28,51 @@ export function HcsAuditBadge({
         href={hashscanTopicUrl}
         target="_blank"
         rel="noreferrer"
-        className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition-colors"
+        className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-mono bg-neutral-100 text-black border border-neutral-300 hover:bg-neutral-200 transition-colors"
         title="Verified on Hedera Consensus Service (HCS)"
       >
-        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+        <span className="w-1.5 h-1.5 rounded-full bg-black animate-pulse" />
         <span>HCS #{sequenceNumber}</span>
       </a>
     );
   }
 
   return (
-    <div className="p-3 bg-gradient-to-r from-emerald-950/40 via-slate-900 to-slate-950 border border-emerald-500/30 rounded-xl text-xs text-slate-300 shadow-sm backdrop-blur-sm">
+    <div className="p-3 bg-neutral-50 border border-neutral-300 rounded-xl text-xs text-black shadow-sm">
       <div className="flex items-center justify-between gap-2 mb-1.5">
         <div className="flex items-center gap-2">
           <span className="flex h-2 w-2 relative">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-black opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-black"></span>
           </span>
-          <span className="font-semibold text-emerald-400 tracking-wide uppercase text-[10px]">
+          <span className="font-semibold text-black tracking-wide uppercase text-[10px]">
             Hedera Consensus Audit Trail (HCS)
           </span>
         </div>
-        <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-mono">
+        <span className="text-[10px] px-2 py-0.5 rounded bg-neutral-200 text-black font-mono border border-neutral-300">
           Seq #{sequenceNumber}
         </span>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-emerald-900/50 font-mono text-[11px]">
+      <div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-neutral-300 font-mono text-[11px]">
         <div>
-          <span className="text-slate-400 text-[10px] block">Topic ID</span>
+          <span className="text-neutral-500 text-[10px] block">Topic ID</span>
           <a
             href={hashscanTopicUrl}
             target="_blank"
             rel="noreferrer"
-            className="text-emerald-300 hover:underline flex items-center gap-1"
+            className="text-black font-semibold hover:underline flex items-center gap-1"
           >
             {topicId} ↗
           </a>
         </div>
         <div>
-          <span className="text-slate-400 text-[10px] block">Settlement Tx</span>
+          <span className="text-neutral-500 text-[10px] block">Settlement Tx</span>
           <a
             href={hashscanTxUrl}
             target="_blank"
             rel="noreferrer"
-            className="text-emerald-300 hover:underline truncate block"
+            className="text-black font-semibold hover:underline truncate block"
           >
             {txId ? `${txId.slice(0, 16)}...` : "Confirmed on Testnet ↗"}
           </a>

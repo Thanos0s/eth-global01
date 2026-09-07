@@ -50,32 +50,32 @@ export function RentSimulatorPanel({
   };
 
   return (
-    <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-5 text-white shadow-lg backdrop-blur-md">
+    <div className="rounded-2xl border border-neutral-300 bg-white p-5 text-black shadow-lg">
       <div className="flex items-center justify-between gap-3 mb-4">
         <div>
-          <span className="text-xs font-semibold uppercase tracking-wider text-teal-400">
+          <span className="text-xs font-semibold uppercase tracking-wider text-neutral-500">
             Hackathon Demo Tool
           </span>
-          <h4 className="text-base font-bold text-slate-100">Simulate Tenant Rent Payment</h4>
+          <h4 className="text-base font-bold text-black">Simulate Tenant Rent Payment</h4>
         </div>
-        <span className="rounded-full bg-teal-950 px-2.5 py-1 text-[11px] font-mono text-teal-300 border border-teal-800/50">
+        <span className="rounded-full bg-neutral-100 px-2.5 py-1 text-[11px] font-mono text-black border border-neutral-300">
           x402 + HCS Connected
         </span>
       </div>
 
-      <p className="text-xs text-slate-400 mb-4 leading-relaxed">
+      <p className="text-xs text-neutral-600 mb-4 leading-relaxed font-mono">
         Simulates an incoming ACH/fiat rental payment converting into stablecoins. Injects funds into the
         Base Sepolia YieldVault reserve, triggers Superfluid CFA stream acceleration, and logs an immutable consensus proof on Hedera.
       </p>
 
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative flex-1 min-w-[140px]">
-          <span className="absolute left-3 top-2.5 text-slate-500 font-mono text-sm">$</span>
+          <span className="absolute left-3 top-2.5 text-neutral-500 font-mono text-sm">$</span>
           <input
             type="number"
             value={rentAmount}
             onChange={(e) => setRentAmount(Number(e.target.value))}
-            className="w-full rounded-xl border border-slate-700 bg-slate-950 pl-7 pr-3 py-2 text-sm font-mono text-white placeholder-slate-500 focus:border-teal-500 focus:outline-none"
+            className="w-full rounded-xl border border-neutral-300 bg-neutral-50 pl-7 pr-3 py-2 text-sm font-mono text-black placeholder-neutral-400 focus:border-black focus:outline-none"
             placeholder="3800"
           />
         </div>
@@ -83,7 +83,7 @@ export function RentSimulatorPanel({
         <button
           onClick={handleDepositRent}
           disabled={isDepositing || rentAmount <= 0}
-          className="rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md hover:from-teal-500 hover:to-emerald-500 disabled:opacity-50 transition-all flex items-center gap-2"
+          className="rounded-xl bg-black px-5 py-2.5 text-sm font-semibold text-white border border-black hover:bg-neutral-800 disabled:opacity-50 transition-all flex items-center gap-2 cursor-pointer"
         >
           {isDepositing ? (
             <>
@@ -100,33 +100,33 @@ export function RentSimulatorPanel({
       </div>
 
       {error && (
-        <div className="mt-3 p-2.5 bg-rose-950/40 border border-rose-800 rounded-lg text-xs text-rose-300">
+        <div className="mt-3 p-2.5 bg-neutral-100 border border-neutral-400 rounded-lg text-xs text-black font-mono">
           {error}
         </div>
       )}
 
       {depositResult && (
-        <div className="mt-4 rounded-xl bg-slate-950 p-3.5 border border-teal-500/30 text-xs text-slate-300 space-y-2 animate-fade-in font-mono">
-          <div className="flex items-center justify-between text-teal-400 font-semibold text-sm">
+        <div className="mt-4 rounded-xl bg-neutral-50 p-3.5 border border-neutral-300 text-xs text-black space-y-2 animate-fade-in font-mono">
+          <div className="flex items-center justify-between text-black font-semibold text-sm">
             <span>✓ ${depositResult.amountDeposited?.toLocaleString()} Deposited</span>
-            <span className="text-[11px] text-slate-400">Flow Rate Active</span>
+            <span className="text-[11px] text-neutral-500">Flow Rate Active</span>
           </div>
 
-          <div className="text-[11px] text-slate-400 grid grid-cols-2 gap-2 pt-1 border-t border-slate-800">
+          <div className="text-[11px] text-neutral-600 grid grid-cols-2 gap-2 pt-1 border-t border-neutral-200">
             <div>
-              <span className="block text-slate-500">Hedera HCS Proof</span>
+              <span className="block text-neutral-500">Hedera HCS Proof</span>
               <a
                 href={depositResult.hcsAudit?.hashscanUrl || "#"}
                 target="_blank"
                 rel="noreferrer"
-                className="text-teal-300 hover:underline truncate block"
+                className="text-black hover:underline truncate block font-bold"
               >
                 Seq #{depositResult.hcsAudit?.sequenceNumber || "83527"} ↗
               </a>
             </div>
             <div>
-              <span className="block text-slate-500">Superfluid Flow</span>
-              <span className="text-emerald-400">
+              <span className="block text-neutral-500">Superfluid Flow</span>
+              <span className="text-black font-bold">
                 +${(depositResult.amountDeposited / 2592000).toFixed(6)} / sec
               </span>
             </div>
