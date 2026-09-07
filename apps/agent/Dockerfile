@@ -11,7 +11,7 @@ RUN apt-get update && \
 # Install dependencies before copying application sources so Docker can reuse
 # the expensive npm layer while only UI/application code changes.
 COPY apps/platform/package.json apps/platform/package-lock.json ./
-RUN npm ci
+RUN npm install
 
 COPY apps/platform/ ./
 RUN npm run build && \
