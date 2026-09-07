@@ -16,7 +16,7 @@ Built for **ETHGlobal 2026**:
 
 The agentic economy requires payment rails that operate at machine speed: sub-second finality, predictable sub-cent fees, and native token operations without smart contract overhead.
 
-LiquidityStream delivers:
+Prism 8 delivers:
 1. **Live x402-gated service on Hedera Testnet**: A metered property verification & physical address validation oracle (`/api/x402/property-oracle`) settled through the **Blocky402** facilitator.
 2. **Autonomous Consuming Agent (Hermes)**: Hermes detects `HTTP 402 Payment Required` challenges, signs and broadcasts micropayments (0.5 HBAR) on Hedera testnet, and completes paid queries end-to-end with **zero human intervention, no API keys, and no subscriptions**.
 3. **Verifiable Payment Audit Trails on HCS**: Every settlement is anchored to a **Hedera Consensus Service (HCS) Topic**, creating an unforgeable, consensus-timestamped public audit log verifiable on HashScan.
@@ -27,7 +27,7 @@ LiquidityStream delivers:
 
 ## 📊 2. The Graph Track: "One AI track, two ways to build"
 
-LiquidityStream fulfills **both halves** of The Graph hackathon track plus the featured x402 payment challenge:
+Prism 8 fulfills **both halves** of The Graph hackathon track plus the featured x402 payment challenge:
 
 ```
                             ┌──────────────────────────────────────┐
@@ -65,7 +65,7 @@ LiquidityStream fulfills **both halves** of The Graph hackathon track plus the f
   * [`apps/agent/mcps/subgraph/mcp-server/src/write.ts`](apps/agent/mcps/subgraph/mcp-server/src/write.ts) (**`subgraph_write`**): Autonomous manifest mutation pipeline (`add_token_source`, `set_token_sources`) that dynamically rewrites `subgraph.yaml`, executes `graph codegen`, builds, and redeploys to Graph Studio with zero human intervention.
 * **Featured x402 Autonomous Payment Challenge**:
   * The Graph track prompt asks: *"or let your agent pay per query autonomously with x402"*.
-  * LiquidityStream implements this via native Hedera x402 + Blocky402 facilitator, allowing agents to pay for data queries and oracles per call with zero subscription lock-in.
+  * Prism 8 implements this via native Hedera x402 + Blocky402 facilitator, allowing agents to pay for data queries and oracles per call with zero subscription lock-in.
 
 ### Way 2: AI Agent Using Live Blockchain Data
 * **Autonomous Real-Estate Yield Allocation**: The Hermes agent uses `subgraph_read.get_top_holders` to query live fractional real-estate ownership distributions, deriving proportional shareholder percentages to open Superfluid CFA cashflow streams.
@@ -76,7 +76,7 @@ LiquidityStream fulfills **both halves** of The Graph hackathon track plus the f
 
 ## 🌊 3. Continuous Real-Time Yield Streaming (Superfluid CFA)
 
-Unlike traditional platforms that distribute rental yield once a month, LiquidityStream streams cashflows **per-second**:
+Unlike traditional platforms that distribute rental yield once a month, Prism 8 streams cashflows **per-second**:
 * Rental inflows are deposited into `YieldVault.sol` on Base Sepolia (wrapping stablecoins into `fUSDCx` Super Tokens).
 * Continuous Flow Agreements (CFA) stream yield directly into fractional token holders' wallets every second:
   $$\text{flowRate} = \frac{\text{monthlyRentUsd} \times \text{investorShareRatio}}{2,592,000 \text{ seconds}}$$

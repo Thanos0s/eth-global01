@@ -1,9 +1,9 @@
 {
   "$schema": "https://specs.blocky402.com/agent-services-v1.json",
-  "name": "LiquidityStream Real-Estate Oracle & Yield Engine",
+  "name": "Prism 8 Real-Estate Oracle & Yield Engine",
   "description": "Agent-operable real estate address verification, DPV delivery validation, and yield streaming engine settled via x402 on Hedera.",
   "version": "1.0.0",
-  "provider": "LiquidityStream / Mint & Chill",
+  "provider": "Prism 8 / Mint & Chill",
   "services": [
     {
       "id": "property-address-validation",

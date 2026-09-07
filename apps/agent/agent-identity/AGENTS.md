@@ -178,7 +178,7 @@ holder proves only that the configured condition is satisfied.
 - Public storefront: `/`, token workspace at `/tokens/{tokenId}`.
 - Your own admin dashboard (not for end users): `/hermes`.
 
-# Real-Estate Yield Streaming Engine (LiquidityStream)
+# Real-Estate Yield Streaming Engine (Prism 8)
 
 When operating real-estate tokens and continuous rental streams:
 
