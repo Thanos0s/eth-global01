@@ -1469,33 +1469,39 @@ LOGIN_PAGE_HTML = """<!DOCTYPE html>
 <title>Hermes Agent — Sign in</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:#0d0f14;color:#c9d1d9;font-family:'IBM Plex Sans',sans-serif;
+body{background:#ffffff;color:#000000;font-family:'JetBrains Mono','SFMono-Regular',Consolas,monospace;
   min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
-.card{background:#14181f;border:1px solid #252d3d;border-radius:12px;padding:36px 32px;width:100%;max-width:380px;
-  box-shadow:0 20px 40px rgba(0,0,0,0.4)}
-.brand{text-align:center;margin-bottom:28px}
-.brand-logo{display:inline-flex;align-items:center;gap:10px;font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:18px;color:#6272ff}
-.brand-logo span{color:#6b7688;font-weight:400}
-.brand-sub{font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6b7688;margin-top:8px;letter-spacing:1.5px;text-transform:uppercase}
-label{display:block;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6b7688;
-  letter-spacing:0.05em;text-transform:uppercase;margin-bottom:6px;margin-top:16px}
-input{width:100%;background:#0d0f14;border:1px solid #252d3d;border-radius:6px;color:#c9d1d9;
-  font-family:'IBM Plex Mono',monospace;font-size:13px;padding:9px 11px;outline:none;transition:border-color .15s}
-input:focus{border-color:#6272ff}
-button{width:100%;margin-top:24px;background:#6272ff;border:1px solid #6272ff;border-radius:6px;color:#fff;
-  font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:500;padding:10px;cursor:pointer;
-  transition:background .15s,border-color .15s}
-button:hover{background:#7b8fff;border-color:#7b8fff}
-.err{background:rgba(248,81,73,0.08);border:1px solid rgba(248,81,73,0.3);border-radius:6px;
-  color:#f85149;font-family:'IBM Plex Mono',monospace;font-size:12px;padding:8px 12px;margin-bottom:14px;text-align:center}
-.footnote{margin-top:18px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6b7688;text-align:center;line-height:1.6}
+.card{background:#ffffff;border:1px solid #000000;border-radius:16px;padding:36px 32px;width:100%;max-width:380px;
+  box-shadow:0 10px 30px rgba(0,0,0,0.06)}
+.logo-box{width:34px;height:34px;border:1px dashed #000000;border-radius:6px;background:#f5f5f5;margin:0 auto 14px}
+.brand{text-align:center;margin-bottom:24px}
+.brand-logo{display:inline-flex;align-items:center;gap:6px;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:20px;color:#000000;letter-spacing:-0.02em}
+.brand-logo span{color:#737373;font-weight:400}
+.brand-sub{font-family:'JetBrains Mono',monospace;font-size:10px;color:#737373;margin-top:8px;letter-spacing:1.8px;text-transform:uppercase;font-weight:600}
+label{display:block;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:#000000;
+  letter-spacing:0.06em;text-transform:uppercase;margin-bottom:6px;margin-top:16px}
+input{width:100%;background:#ffffff;border:1px solid #d4d4d4;border-radius:8px;color:#000000;
+  font-family:'JetBrains Mono',monospace;font-size:13px;padding:10px 12px;outline:none;transition:border-color .15s,box-shadow .15s}
+input:focus{border-color:#000000;box-shadow:0 0 0 1px #000000}
+button{width:100%;margin-top:24px;background:#000000;border:1px solid #000000;border-radius:8px;color:#ffffff;
+  font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;padding:11px;cursor:pointer;
+  transition:background .15s}
+button:hover{background:#262626;border-color:#262626}
+.err{background:#f5f5f5;border:1px solid #000000;border-radius:8px;
+  color:#000000;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;padding:10px 12px;margin-bottom:16px;text-align:center}
+.footnote{margin-top:20px;font-family:'JetBrains Mono',monospace;font-size:10px;color:#737373;text-align:center;line-height:1.6}
+.footnote code{background:#f5f5f5;border:1px solid #e5e5e5;padding:2px 5px;border-radius:4px;color:#000000;font-size:10px}
+.back-link{margin-top:16px;text-align:center}
+.back-link a{color:#737373;font-size:11px;text-decoration:none;font-family:'JetBrains Mono',monospace;transition:color .15s}
+.back-link a:hover{color:#000000;text-decoration:underline}
 </style></head>
 <body>
 <div class="card">
   <div class="brand">
+    <div class="logo-box" aria-label="Logo placeholder"></div>
     <div class="brand-logo">hermes<span>/admin</span></div>
     <div class="brand-sub">Sign in to continue</div>
   </div>
@@ -1509,6 +1515,7 @@ button:hover{background:#7b8fff;border-color:#7b8fff}
     <button type="submit">Sign in</button>
   </form>
   <p class="footnote">Credentials are the <code>ADMIN_USERNAME</code> and <code>ADMIN_PASSWORD</code><br>Railway service variables.</p>
+  <div class="back-link"><a href="/">← Back to Prism 8</a></div>
 </div>
 </body></html>"""
 
@@ -2632,58 +2639,57 @@ async def api_backup_restore(request: Request) -> Response:
 
 # ── Reverse proxy → Hermes dashboard ──────────────────────────────────────────
 _WIDGET_LINK_STYLE = (
-    "background:rgba(20,24,31,0.92);backdrop-filter:blur(8px);"
-    "border:1px solid #252d3d;border-radius:6px;padding:6px 12px;"
-    "color:#c9d1d9;text-decoration:none;display:inline-flex;"
-    "align-items:center;gap:6px;"
+    "background:#ffffff;"
+    "border:1px solid #000000;border-radius:6px;padding:6px 12px;"
+    "color:#000000;text-decoration:none;display:inline-flex;"
+    "align-items:center;gap:6px;font-weight:600;"
 )
 BACK_TO_SETUP_WIDGET = (
     '<div id="hermes-back-widget" style="position:fixed;bottom:14px;right:14px;'
     'z-index:99999;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;'
     'font-size:11px;display:flex;gap:8px;">'
     f'<a href="/" style="{_WIDGET_LINK_STYLE}">'
-    '<span style="width:6px;height:6px;border-radius:999px;background:#8b5cf6;'
-    'box-shadow:0 0 10px rgba(139,92,246,.8)"></span>Tokenization</a>'
-    f'<a href="/setup" style="{_WIDGET_LINK_STYLE}">← Setup</a>'
+    '<span style="width:6px;height:6px;border-radius:999px;background:#000000;'
+    '"></span>Prism 8</a>'
     f'<a href="/logout" style="{_WIDGET_LINK_STYLE}">Sign out</a>'
     '</div>'
 )
 
 DASHBOARD_UNAVAILABLE_HTML = """<!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8"><title>Dashboard starting…</title>
-<style>body{background:#0d0f14;color:#c9d1d9;font-family:ui-monospace,Menlo,monospace;
-display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}
-.card{max-width:480px;padding:32px;border:1px solid #252d3d;border-radius:12px;
-background:#14181f;text-align:center}
-h1{font-size:16px;color:#d29922;margin:0 0 12px;font-weight:600}
-p{font-size:13px;color:#6b7688;line-height:1.6;margin:0 0 16px}
-a{color:#6272ff;text-decoration:none;border:1px solid #252d3d;border-radius:6px;
-padding:7px 14px;font-size:12px;display:inline-block}
-a:hover{border-color:#6272ff}</style></head>
+<style>body{background:#ffffff;color:#000000;font-family:'JetBrains Mono','SFMono-Regular',Consolas,monospace;
+display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:20px}
+.card{max-width:480px;padding:32px;border:1px solid #000000;border-radius:16px;
+background:#ffffff;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,0.06)}
+h1{font-size:16px;color:#000000;margin:0 0 12px;font-weight:700}
+p{font-size:13px;color:#737373;line-height:1.6;margin:0 0 16px}
+a{color:#ffffff;background:#000000;text-decoration:none;border:1px solid #000000;border-radius:8px;
+padding:9px 16px;font-size:12px;font-weight:600;display:inline-block;transition:background .15s}
+a:hover{background:#262626}</style></head>
 <body><div class="card">
-<h1>⚠ Hermes dashboard unavailable</h1>
-<p>The native Hermes dashboard is not responding on port %d.<br>
-It may still be starting up, or it may have crashed.</p>
-<p>Try refreshing in a few seconds, or head back to setup.</p>
-<a href="/setup">← Back to Setup</a>
+<h1>⚠ Hermes dashboard starting…</h1>
+<p>The native Hermes daemon is initializing on port %d.<br>
+It will be ready in a few moments.</p>
+<a href="/">← Back to Prism 8</a>
 </div>
 <script>setTimeout(()=>location.reload(),4000);</script>
 </body></html>""" % HERMES_DASHBOARD_PORT
 
 TOKENIZATION_UNAVAILABLE_HTML = """<!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"><title>Tokenization starting…</title>
-<style>body{background:#09090b;color:#e4e4e7;font-family:ui-monospace,Menlo,monospace;
-display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}
-.card{max-width:500px;padding:32px;border:1px solid #27272a;border-radius:12px;
-background:#18181b;text-align:center}
-h1{font-size:16px;color:#a78bfa;margin:0 0 12px;font-weight:600}
-p{font-size:13px;color:#a1a1aa;line-height:1.6;margin:0 0 16px}
-a{color:#c4b5fd;text-decoration:none;border:1px solid #3f3f46;border-radius:6px;
-padding:7px 14px;font-size:12px;display:inline-block}</style></head>
+<html lang="en"><head><meta charset="UTF-8"><title>Prism 8 starting…</title>
+<style>body{background:#ffffff;color:#000000;font-family:'JetBrains Mono','SFMono-Regular',Consolas,monospace;
+display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:20px}
+.card{max-width:480px;padding:32px;border:1px solid #000000;border-radius:16px;
+background:#ffffff;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,0.06)}
+h1{font-size:16px;color:#000000;margin:0 0 12px;font-weight:700}
+p{font-size:13px;color:#737373;line-height:1.6;margin:0 0 16px}
+a{color:#ffffff;background:#000000;text-decoration:none;border:1px solid #000000;border-radius:8px;
+padding:9px 16px;font-size:12px;font-weight:600;display:inline-block;transition:background .15s}
+a:hover{background:#262626}</style></head>
 <body><div class="card">
-<h1>Tokenization Platform is starting</h1>
-<p>The private Next.js server is not responding yet. This page will retry automatically.</p>
-<a href="/hermes?force=1">← Back to Hermes</a>
+<h1>Prism 8 Platform is starting</h1>
+<p>The Next.js production server is initializing. This page will retry automatically.</p>
+<a href="/hermes?force=1">← Open Hermes Console</a>
 </div><script>setTimeout(()=>location.reload(),3000);</script></body></html>"""
 
 
