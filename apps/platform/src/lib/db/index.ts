@@ -15,14 +15,34 @@ declare global {
 }
 
 function openDb(): Database.Database {
-  const dbPath = process.env.DATABASE_PATH ?? "./data/tokenization.db";
-  const resolved = path.isAbsolute(dbPath)
+  const isServerless = !!process.env.VERCEL || !!process.env.AWS_LAMBDA_FUNCTION_NAME;
+  let dbPath = process.env.DATABASE_PATH;
+
+  if (!dbPath) {
+    dbPath = isServerless ? "/tmp/tokenization.db" : "./data/tokenization.db";
+  }
+
+  let resolved = path.isAbsolute(dbPath)
     ? dbPath
     : path.join(/* turbopackIgnore: true */ process.cwd(), dbPath);
-  fs.mkdirSync(path.dirname(resolved), { recursive: true });
+
+  try {
+    fs.mkdirSync(path.dirname(resolved), { recursive: true });
+  } catch (err) {
+    console.warn(`[DB] Cannot create directory ${path.dirname(resolved)}, falling back to /tmp/tokenization.db:`, err);
+    resolved = "/tmp/tokenization.db";
+  }
 
   const db = new Database(resolved);
-  db.pragma("journal_mode = WAL");
+  try {
+    db.pragma("journal_mode = WAL");
+  } catch {
+    try {
+      db.pragma("journal_mode = DELETE");
+    } catch {
+      // Fallback in restricted serverless environments
+    }
+  }
   db.pragma("foreign_keys = ON");
   db.exec(SCHEMA_SQL);
   migrateTokenChains(db);

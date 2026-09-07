@@ -6,8 +6,17 @@ import { WalletProvider } from "@/hooks/useWalletConnect";
 import { EvmWalletProvider } from "@/hooks/useEvmWallet";
 import WalletConnectButton from "@/components/WalletConnectButton";
 
+const getAppUrl = () => {
+  const envUrl = process.env.TOKENIZATION_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+  try {
+    return new URL(envUrl.startsWith("http") ? envUrl : `https://${envUrl}`);
+  } catch {
+    return new URL("http://localhost:3000");
+  }
+};
+
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.TOKENIZATION_APP_URL ?? "http://localhost:3000"),
+  metadataBase: getAppUrl(),
   title: "Prism 8 · Real-Estate Yield Streaming Engine",
   description:
     "Decentralized real-estate yield streaming platform powered by Hedera x402, The Graph, and Superfluid.",

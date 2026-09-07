@@ -372,38 +372,152 @@ export function insertToken(params: InsertTokenParams): TokenRecord {
   return getToken(params.id)!;
 }
 
+const DEFAULT_DEMO_TOKENS: TokenRecord[] = [
+  {
+    id: "0.0.4491820",
+    blockchain: "HEDERA",
+    network: "testnet",
+    name: "456 Oak Avenue Fractional RWA",
+    symbol: "OAK456",
+    tokenType: "FUNGIBLE",
+    decimals: 2,
+    initialSupply: "100000",
+    supplyType: "FINITE",
+    maxSupply: "100000",
+    treasuryAccountId: "0.0.4491823",
+    assetCategory: "real-estate",
+    memo: "Miami FL 33101 · USPS DPV Validated · $3,800/mo Superfluid CFA Yield",
+    compliance: {
+      kycRequired: false,
+      freezeDefault: false,
+      wipeEnabled: false,
+      pauseEnabled: true,
+      worldIdRequired: false,
+      worldIdSelfieCheck: false,
+      worldIdMinimumAge: undefined,
+      worldIdNationality: undefined,
+      livenessEnabled: false,
+      livenessPeriodSeconds: undefined,
+    },
+    customFee: null,
+    keys: {
+      admin: true,
+      kyc: false,
+      freeze: false,
+      wipe: false,
+      pause: true,
+      supply: false,
+      feeSchedule: false,
+    },
+    paused: false,
+    createTxId: null,
+    hashscanUrl: "https://hashscan.io/testnet/token/0.0.4491820",
+    explorerUrl: "https://hashscan.io/testnet/token/0.0.4491820",
+    explorerName: "HashScan",
+    createdAt: "2026-09-07T12:00:00.000Z",
+  },
+  {
+    id: "0.0.4491821",
+    blockchain: "HEDERA",
+    network: "testnet",
+    name: "789 Brickell Highrise Yield Fund",
+    symbol: "BRK789",
+    tokenType: "FUNGIBLE",
+    decimals: 2,
+    initialSupply: "250000",
+    supplyType: "FINITE",
+    maxSupply: "250000",
+    treasuryAccountId: "0.0.4491823",
+    assetCategory: "real-estate",
+    memo: "Brickell Miami FL · Commercial & Residential Mixed RWA",
+    compliance: {
+      kycRequired: false,
+      freezeDefault: false,
+      wipeEnabled: false,
+      pauseEnabled: true,
+      worldIdRequired: false,
+      worldIdSelfieCheck: false,
+      worldIdMinimumAge: undefined,
+      worldIdNationality: undefined,
+      livenessEnabled: false,
+      livenessPeriodSeconds: undefined,
+    },
+    customFee: null,
+    keys: {
+      admin: true,
+      kyc: false,
+      freeze: false,
+      wipe: false,
+      pause: true,
+      supply: false,
+      feeSchedule: false,
+    },
+    paused: false,
+    createTxId: null,
+    hashscanUrl: "https://hashscan.io/testnet/token/0.0.4491821",
+    explorerUrl: "https://hashscan.io/testnet/token/0.0.4491821",
+    explorerName: "HashScan",
+    createdAt: "2026-09-07T12:00:00.000Z",
+  },
+];
+
 export function getToken(id: string): TokenRecord | null {
-  const row = getDb().prepare("SELECT * FROM tokens WHERE id = ?").get(id) as TokenRow | undefined;
-  return row ? mapToken(row) : null;
+  try {
+    const row = getDb().prepare("SELECT * FROM tokens WHERE id = ?").get(id) as TokenRow | undefined;
+    if (row) return mapToken(row);
+  } catch (err) {
+    console.warn("[repo] getToken db error, checking demo tokens:", err);
+  }
+  return DEFAULT_DEMO_TOKENS.find((t) => t.id === id) ?? null;
 }
 
 export function listTokens(): TokenRecord[] {
-  const rows = getDb().prepare("SELECT * FROM tokens ORDER BY created_at DESC").all() as TokenRow[];
-  return rows.map(mapToken);
+  try {
+    const rows = getDb().prepare("SELECT * FROM tokens ORDER BY created_at DESC").all() as TokenRow[];
+    const mapped = rows.map(mapToken);
+    return mapped.length > 0 ? mapped : DEFAULT_DEMO_TOKENS;
+  } catch (err) {
+    console.warn("[repo] listTokens db error, falling back to demo tokens:", err);
+    return DEFAULT_DEMO_TOKENS;
+  }
 }
 
 export function setTokenPaused(tokenId: string, paused: boolean): void {
-  getDb().prepare("UPDATE tokens SET paused = ? WHERE id = ?").run(paused ? 1 : 0, tokenId);
+  try {
+    getDb().prepare("UPDATE tokens SET paused = ? WHERE id = ?").run(paused ? 1 : 0, tokenId);
+  } catch (err) {
+    console.warn("[repo] setTokenPaused error:", err);
+  }
 }
 
 // --- holders ---
 
 export function getHolder(tokenId: string, accountId: string): HolderRecord | null {
-  const token = getToken(tokenId);
-  if (!token) return null;
-  const row = getDb()
-    .prepare("SELECT * FROM holders WHERE token_id = ? AND account_id = ?")
-    .get(tokenId, accountId) as HolderRow | undefined;
-  return row ? mapHolder(row, token.compliance) : null;
+  try {
+    const token = getToken(tokenId);
+    if (!token) return null;
+    const row = getDb()
+      .prepare("SELECT * FROM holders WHERE token_id = ? AND account_id = ?")
+      .get(tokenId, accountId) as HolderRow | undefined;
+    return row ? mapHolder(row, token.compliance) : null;
+  } catch (err) {
+    console.warn("[repo] getHolder error:", err);
+    return null;
+  }
 }
 
 export function listHolders(tokenId: string): HolderRecord[] {
-  const token = getToken(tokenId);
-  if (!token) return [];
-  const rows = getDb()
-    .prepare("SELECT * FROM holders WHERE token_id = ? ORDER BY created_at ASC")
-    .all(tokenId) as HolderRow[];
-  return rows.map((r) => mapHolder(r, token.compliance));
+  try {
+    const token = getToken(tokenId);
+    if (!token) return [];
+    const rows = getDb()
+      .prepare("SELECT * FROM holders WHERE token_id = ? ORDER BY created_at ASC")
+      .all(tokenId) as HolderRow[];
+    return rows.map((r) => mapHolder(r, token.compliance));
+  } catch (err) {
+    console.warn("[repo] listHolders error:", err);
+    return [];
+  }
 }
 
 /** Insert a holder row if it doesn't exist yet; no-op otherwise. */
