@@ -177,3 +177,24 @@ holder proves only that the configured condition is satisfied.
 
 - Public storefront: `/`, token workspace at `/tokens/{tokenId}`.
 - Your own admin dashboard (not for end users): `/hermes`.
+
+# Real-Estate Yield Streaming Engine (LiquidityStream)
+
+When operating real-estate tokens and continuous rental streams:
+
+1. **Mandatory USPS Address Verification via x402**:
+   - You have a `usps_chainlink` MCP server (`validate_property_address`, `get_verification_status`, `store_verified_hash`).
+   - You must ALWAYS call `validate_property_address(street, city, state, zip)` before minting or distributing any real estate asset token.
+   - When the service returns `HTTP 402 Payment Required`, the tool autonomously settles the 0.5 HBAR micropayment on Hedera Testnet and records an unforgeable receipt on the Hedera Consensus Service (HCS) Topic.
+   - Only proceed with token minting if `isValid == true` and `dpvConfirmation == "Y"`.
+   - If an address fails verification (`isValid == false`), halt tokenization immediately and notify the operator.
+
+2. **Per-Second Rental Yield Streaming via Superfluid**:
+   - You have a `superfluid` MCP server (`create_yield_stream`, `update_flow_rate`, `delete_stream`, `get_active_streams`, `get_stream_balance`).
+   - When asked to start or manage yield distributions for a verified real-estate token:
+     - Compute the per-second flow rate:
+       `flowRate = (monthlyRentUsd * investorShareBasisPoints) / (10000 * 2592000 seconds)`
+     - Open the continuous stream using `create_yield_stream(tokenAddress, receiver, flowRate, propertyId)` on Base Sepolia (`fUSDCx`).
+   - If a compliance violation, title dispute, or invalid address change occurs:
+     - Immediately execute emergency freeze: call `pause_token` on Hedera and `delete_stream` on Superfluid.
+

@@ -679,6 +679,8 @@ def write_config_yaml(data: dict[str, str], *, reset_model: bool = False) -> Non
     _ensure_mcp_entry("evm_read", "python", ["/app/mcps/evm/read_server.py"], tokenization_env)
     _ensure_mcp_entry("evm_write", "python", ["/app/mcps/evm/write_server.py"], tokenization_env)
     _ensure_mcp_entry("worldid", "python", ["/app/worldid_mcp.py"], tokenization_env)
+    _ensure_mcp_entry("usps_chainlink", "python", ["/app/mcps/usps_chainlink/server.py"], tokenization_env)
+    _ensure_mcp_entry("superfluid", "python", ["/app/mcps/superfluid/server.py"], tokenization_env)
 
     # The subgraph MCP is the upstream TypeScript server, run as-is: Hermes launches
     # each half via tsx (baked into the image at /opt/subgraph-mcp/src/{read,write}.ts).
@@ -3119,6 +3121,15 @@ routes = [
     Route("/api/evm/{path:path}",               route_tokenization,  methods=ANY_METHOD),
     Route("/api/worldid",                       route_tokenization,  methods=ANY_METHOD),
     Route("/api/worldid/{path:path}",           route_tokenization,  methods=ANY_METHOD),
+    Route("/api/x402",                          route_tokenization,  methods=ANY_METHOD),
+    Route("/api/x402/{path:path}",              route_tokenization,  methods=ANY_METHOD),
+    Route("/api/properties",                    route_tokenization,  methods=ANY_METHOD),
+    Route("/api/properties/{path:path}",        route_tokenization,  methods=ANY_METHOD),
+    Route("/api/yield",                         route_tokenization,  methods=ANY_METHOD),
+    Route("/api/yield/{path:path}",             route_tokenization,  methods=ANY_METHOD),
+    Route("/api/rent",                          route_tokenization,  methods=ANY_METHOD),
+    Route("/api/rent/{path:path}",              route_tokenization,  methods=ANY_METHOD),
+    Route("/.well-known/{path:path}",           route_tokenization,  methods=ANY_METHOD),
     Route("/api/runtime-config",                route_tokenization,  methods=ANY_METHOD),
     Route("/_next/{path:path}",                 route_tokenization,  methods=ANY_METHOD),
     Route("/favicon.ico",                       route_tokenization,  methods=ANY_METHOD),
