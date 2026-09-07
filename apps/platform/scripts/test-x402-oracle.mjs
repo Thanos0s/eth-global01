@@ -1,13 +1,17 @@
 import assert from "node:assert";
 import fs from "node:fs";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 
 async function runTests() {
   console.log("=== Testing x402 Property Oracle Protocol and Discovery ===");
 
   // Step 1: Agent Services Discovery Directory
   console.log("\n[Test 1] Verifying Agent Services Discovery Schema...");
-  const wellKnownPath = path.join(process.cwd(), "public", ".well-known", "agent-services.json");
+  const platformRoot = fs.existsSync(path.join(process.cwd(), "public"))
+    ? process.cwd()
+    : path.join(process.cwd(), "apps", "platform");
+  const wellKnownPath = path.join(platformRoot, "public", ".well-known", "agent-services.json");
   assert(fs.existsSync(wellKnownPath), "Agent services discovery file must exist");
   const directory = JSON.parse(fs.readFileSync(wellKnownPath, "utf8"));
   assert(directory.services && Array.isArray(directory.services), "Services must be an array");
@@ -19,7 +23,8 @@ async function runTests() {
 
   // Step 2: Unpaid Request -> HTTP 402 with Blocky402 Facilitator
   console.log("\n[Test 2] Verifying unpaid request returns HTTP 402 with Blocky402 challenge...");
-  const { handlePropertyOracleRequest } = await import("../src/lib/x402/oracleService.js");
+  const oracleModulePath = path.join(platformRoot, "src", "lib", "x402", "oracleService.js");
+  const { handlePropertyOracleRequest } = await import(pathToFileURL(oracleModulePath).href);
   const unpaid = await handlePropertyOracleRequest({
     street: "456 Oak Avenue",
     city: "Miami",

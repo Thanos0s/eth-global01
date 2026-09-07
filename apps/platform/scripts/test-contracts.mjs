@@ -6,7 +6,10 @@ import { ethers } from "ethers";
 async function runTests() {
   console.log("=== Testing LiquidityStream Smart Contracts ===");
 
-  const generatedDir = path.join(process.cwd(), "src", "lib", "evm", "generated");
+  const platformRoot = fs.existsSync(path.join(process.cwd(), "src"))
+    ? process.cwd()
+    : path.join(process.cwd(), "apps", "platform");
+  const generatedDir = path.join(platformRoot, "src", "lib", "evm", "generated");
 
   // Step 1: Check artifact existence
   console.log("\n[Test 1] Checking compiled contract artifacts...");
