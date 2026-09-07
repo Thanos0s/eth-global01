@@ -1,20 +1,20 @@
 # LiquidityStream: 5-Minute Hackathon Demo Script
-**Autonomous Real-Estate Yield Streaming Engine with Hedera x402 & Superfluid**
+**Autonomous Real-Estate Yield Streaming Engine with Hedera x402, Superfluid, & The Graph**
 
-- **Target Audience:** ETHGlobal Judges (Hedera, Superfluid, Chainlink tracks)
+- **Target Audience:** ETHGlobal Judges (Hedera, The Graph, Superfluid, Chainlink tracks)
 - **Presenter Role:** Platform Operator / Admin pair programming with Hermes Agent
-- **Key Takeaway:** Real-world physical real estate verified via x402 oracle on Hedera, fractionalized via Hedera Token Service (HTS), and streaming rental yield per-second via Superfluid CFA on Base Sepolia.
+- **Key Takeaway:** Real-world physical real estate verified via x402 oracle on Hedera, indexed autonomously by The Graph, fractionalized via Hedera Token Service (HTS), and streaming rental yield per-second via Superfluid CFA on Base Sepolia.
 
 ---
 
 ## ⏱️ Video & Live Demo Breakdown (Total Time: 4:30)
 
 ### [0:00 - 0:45] 1. The Hook: The Agentic Economy's Missing Piece
-* **Screen:** Storefront homepage (`http://localhost:8080/` or deployment URL) showing the **LiquidityStream Engine** banner.
+* **Screen:** Storefront homepage (`http://localhost:3000/` or deployment URL) showing the **LiquidityStream Engine** banner.
 * **Talking Points:**
   > "The agentic economy needs payment rails that move at machine speed—sub-second finality, predictable sub-cent fees, and no smart contract overhead. Hedera is built for this, but autonomous agents have lacked real services to buy without API keys or credit cards.
   >
-  > Today, we introduce **LiquidityStream**: an autonomous real-estate yield streaming engine powered by **Hedera x402**, **Superfluid CFA**, **Chainlink Functions**, and the **Hermes AI Agent**."
+  > Today, we introduce **LiquidityStream**: an autonomous real-estate yield streaming engine powered by **Hedera x402**, **The Graph**, **Superfluid CFA**, **Chainlink Functions**, and the **Hermes AI Agent**."
 * **Action:** Highlight the live Agent Discovery Directory link (`/.well-known/agent-services.json`) showing metered machine-readable endpoints.
 
 ---
@@ -36,25 +36,24 @@
 
 ---
 
-### [1:45 - 2:45] 3. Native HTS Minting & Investor World ID Acquisition
-* **Screen:** Open the token details workspace (`/tokens/456-oak-ave`).
-* **Actions:**
-  1. Show the deployed **Hedera Token Service (HTS)** token representing 1,000 fractional property shares.
-  2. Connect an investor wallet (HashPack or MetaMask via WalletConnect).
-  3. Complete the World ID check.
-  4. Hermes approves the request and distributes the HTS fractional shares to the investor.
+### [1:45 - 2:30] 3. The Graph AI Inspector & Autonomous Indexing
+* **Screen:** Click **"The Graph AI Inspector"** button on the storefront homepage.
+* **Visual Flow:**
+  1. **Live GraphQL Query Runner:** Click **"Top Token Holders (Yield Allocation)"** to see live indexed shareholder balances and derived flow rates.
+  2. **MCP Tooling Tab:** Highlight `subgraph_read` (8 query tools) and `subgraph_write` (`add_token_source`).
+  3. **Autonomous Pipeline:** Explain that when new properties are tokenized, Hermes uses `subgraph_write.add_token_source` to dynamically edit `subgraph.yaml` and redeploy to Graph Studio without developer intervention.
 * **Talking Points:**
-  > "Ownership is backed natively by Hedera Token Service (HTS), giving us native compliance controls—kyc, freeze, and wipe—without heavy EVM gas overhead."
+  > "For The Graph AI Track, we built dual Model Context Protocol servers. Hermes doesn't just read indexed data—it autonomously mutates the Subgraph manifest and redeploys it to Graph Studio as new assets are created. Furthermore, The Graph provides the live financial source of truth that drives our per-second rental yield distribution."
 
 ---
 
-### [2:45 - 3:45] 4. Per-Second Rental Yield Streaming (Superfluid CFA)
+### [2:30 - 3:45] 4. Per-Second Rental Yield Streaming (Superfluid CFA)
 * **Screen:** The **Investor Stream Dashboard**.
 * **Visual Flow:**
   1. Point to the live ticking yield counter: **`+$0.00162037 / sec`**.
-  2. Watch the investor balance ticking continuously upward every fraction of a second.
+  2. Watch the investor balance ticking continuously upward every 80ms.
   3. Click **"Trigger Tenant Rent Deposit"** in the **Rent Simulator Panel** ($3,800 inflow).
-  4. Observe the stream update, with simulated fiat converting to `fUSDCx` Super Tokens in `YieldVault.sol`.
+  4. Observe the stream update in real-time, with simulated rent converting to `fUSDCx` Super Tokens in `YieldVault.sol`.
   5. Click **"Claim Yield"** to trigger a Hedera Scheduled Transaction settlement.
 * **Talking Points:**
   > "Rent is traditionally paid once a month. With LiquidityStream, rental yield is unlocked continuously. Every single second, the investor's balance streams in real-time via Superfluid Constant Flow Agreements on Base Sepolia, backed by automated batch settlement via Hedera Scheduled Transactions."
@@ -67,12 +66,13 @@
   1. Open the HashScan explorer showing the HCS Topic messages, sequence numbers, and consensus timestamps.
   2. Explain the compliance policy: If USPS records or property title ever fail an audit, Hermes immediately executes `emergencyFreezeAll()`, freezing the HTS token and cutting the Superfluid stream instantly.
 * **Closing:**
-  > "LiquidityStream unites the speed and efficiency of Hedera x402 with continuous Superfluid streaming and Chainlink real-world validation. This is how the agentic real-world economy gets built."
+  > "LiquidityStream unites the speed of Hedera x402, the data intelligence of The Graph, continuous Superfluid cashflow streaming, and Chainlink real-world validation into a single autonomous engine. Thank you!"
 
 ---
 
 ## 🛠️ Rapid Demo Checklist for Presenter
-- [ ] Next.js Storefront running on `http://localhost:8080/` (or Railway root)
-- [ ] Hermes Console accessible at `http://localhost:8080/hermes`
+- [ ] Next.js Storefront running on `http://localhost:3000/` (or Railway root)
+- [ ] Hermes Console accessible at `http://localhost:3000/hermes`
 - [ ] Testnet wallet connected with HBAR testnet funds
 - [ ] Base Sepolia RPC configured for Superfluid CFA inspection
+- [ ] All 5 verification test suites verified (`npm run build`, `test-x402-oracle.mjs`, `test-contracts.mjs`, `test-subgraph.mjs`, `test_usps_chainlink.py`, `test_superfluid.py`)
