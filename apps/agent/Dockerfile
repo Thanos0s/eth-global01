@@ -141,6 +141,8 @@ COPY apps/agent/server.py /app/server.py
 COPY apps/agent/mcps/hedera/ /app/mcps/hedera/
 COPY apps/agent/mcps/evm/ /app/mcps/evm/
 COPY apps/agent/mcps/worldid/server.py /app/worldid_mcp.py
+COPY apps/agent/mcps/usps_chainlink/ /app/mcps/usps_chainlink/
+COPY apps/agent/mcps/superfluid/ /app/mcps/superfluid/
 COPY apps/agent/templates/ /app/templates/
 COPY apps/agent/start.sh /app/start.sh
 # Default agent identity (AGENTS.md, etc.) — start.sh seeds these onto the

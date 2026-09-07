@@ -63,7 +63,7 @@ if [ -d /opt/hermes-agent-identity ]; then
       *)
         dest="/data/.hermes/$name" ;;
     esac
-    if [ "$name" = "CLAUDE.md" ]; then
+    if [ "$name" = "CLAUDE.md" ] || [ "$name" = "AGENTS.md" ]; then
       cp "$f" "$dest"
     elif [ ! -f "$dest" ]; then
       cp "$f" "$dest"
