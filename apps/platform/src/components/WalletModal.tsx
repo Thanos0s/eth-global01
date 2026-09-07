@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useWallet } from "@/hooks/useWalletConnect";
 import { useEvmWallet } from "@/hooks/useEvmWallet";
 
@@ -29,9 +30,24 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
   const hedera = useWallet();
   const evm = useEvmWallet();
 
+  const [mounted, setMounted] = useState(false);
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
   const [connectingWalletId, setConnectingWalletId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"wallets" | "account">("wallets");
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Lock body scroll when modal is open
+  useEffect(() => {
+    if (!isOpen) return;
+    const originalStyle = window.getComputedStyle(document.body).overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = originalStyle;
+    };
+  }, [isOpen]);
 
   // Extension detection
   const [detected, setDetected] = useState<{
@@ -78,7 +94,7 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, onClose]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !mounted) return null;
 
   const handleCopy = (address: string) => {
     navigator.clipboard.writeText(address);
@@ -214,9 +230,9 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
 
   const isAnyConnected = Boolean(evm.accountId || hedera.accountId);
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 overflow-y-auto animate-fade-in font-mono"
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto font-mono"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -224,15 +240,15 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
       aria-modal="true"
       aria-labelledby="wallet-modal-title"
     >
-      <div className="relative w-full max-w-2xl rounded-3xl border border-neutral-300 bg-white text-black shadow-2xl overflow-hidden flex flex-col md:flex-row">
+      <div className="relative w-full max-w-2xl rounded-3xl border border-neutral-300 bg-white text-black shadow-2xl overflow-hidden flex flex-col md:flex-row my-auto max-h-[90vh]">
         
         {/* Close Button at top-right */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 z-10 w-8 h-8 rounded-lg flex items-center justify-center text-neutral-400 hover:text-black hover:bg-neutral-100 transition-colors"
+          className="absolute top-4 right-4 z-20 w-8 h-8 rounded-lg bg-neutral-100 hover:bg-neutral-200 flex items-center justify-center text-neutral-600 hover:text-black transition-colors cursor-pointer"
           aria-label="Close modal"
         >
-          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <line x1="18" y1="6" x2="6" y2="18" />
             <line x1="6" y1="6" x2="18" y2="18" />
           </svg>
@@ -494,7 +510,8 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
         </div>
 
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
