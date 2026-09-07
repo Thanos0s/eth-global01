@@ -60,10 +60,10 @@ export default function DeployedTokenCatalog({ tokens }: { tokens: TokenRecord[]
         </div>
 
         {/* 2. 3 Slot Cards (Ad402 Exact Slot Grid Layout) */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-16">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-16 items-stretch">
           
           {/* Slot 1: Live Yield Stream */}
-          <div className="bg-white p-6 border border-neutral-300 shadow-sm flex flex-col justify-between">
+          <div className="bg-white p-6 border border-neutral-300 shadow-sm flex flex-col justify-between h-full">
             <div>
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-mono font-semibold text-black">Yield Stream Slot</h3>
@@ -71,10 +71,10 @@ export default function DeployedTokenCatalog({ tokens }: { tokens: TokenRecord[]
                   Superfluid CFA
                 </span>
               </div>
-              <p className="text-xs text-neutral-600 font-mono mb-4">
+              <p className="text-xs text-neutral-600 font-mono mb-4 min-h-[32px]">
                 Continuous cashflow streaming at +$0.00162037/sec on Base Sepolia.
               </p>
-              <div className="ad402-slot mb-4">
+              <div className="ad402-slot mb-4 min-h-[260px] flex flex-col justify-between">
                 <InvestorStreamDashboard
                   propertyAddress="456 Oak Avenue, Miami FL 33101"
                   monthlyRent={3800}
@@ -90,7 +90,7 @@ export default function DeployedTokenCatalog({ tokens }: { tokens: TokenRecord[]
           </div>
 
           {/* Slot 2: Tenant Payment Simulator */}
-          <div className="bg-white p-6 border border-neutral-300 shadow-sm flex flex-col justify-between">
+          <div className="bg-white p-6 border border-neutral-300 shadow-sm flex flex-col justify-between h-full">
             <div>
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-mono font-semibold text-black">Tenant Payment Slot</h3>
@@ -98,10 +98,10 @@ export default function DeployedTokenCatalog({ tokens }: { tokens: TokenRecord[]
                   Rent Inflow
                 </span>
               </div>
-              <p className="text-xs text-neutral-600 font-mono mb-4">
+              <p className="text-xs text-neutral-600 font-mono mb-4 min-h-[32px]">
                 Simulate tenant rent deposit ($3,800) converting into yield streams.
               </p>
-              <div className="ad402-slot mb-4">
+              <div className="ad402-slot mb-4 min-h-[260px] flex flex-col justify-between">
                 <RentSimulatorPanel
                   propertyId="prop_456_oak_ave"
                   defaultRentAmount={3800}
@@ -115,7 +115,7 @@ export default function DeployedTokenCatalog({ tokens }: { tokens: TokenRecord[]
           </div>
 
           {/* Slot 3: Hedera x402 Oracle */}
-          <div className="bg-white p-6 border border-neutral-300 shadow-sm flex flex-col justify-between">
+          <div className="bg-white p-6 border border-neutral-300 shadow-sm flex flex-col justify-between h-full">
             <div>
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-mono font-semibold text-black">x402 Verification Slot</h3>
@@ -123,41 +123,60 @@ export default function DeployedTokenCatalog({ tokens }: { tokens: TokenRecord[]
                   Hedera 0.5 HBAR
                 </span>
               </div>
-              <p className="text-xs text-neutral-600 font-mono mb-4">
+              <p className="text-xs text-neutral-600 font-mono mb-4 min-h-[32px]">
                 USPS physical address validation with unforgeable HCS audit receipt.
               </p>
-              <div className="ad402-slot mb-4 font-mono text-xs space-y-2.5">
-                <div className="flex items-center justify-between border-b border-neutral-300 pb-2">
-                  <span className="text-neutral-500">Endpoint:</span>
-                  <span className="text-black truncate max-w-[170px]">/api/x402/property-oracle</span>
-                </div>
-                <div className="flex items-center justify-between border-b border-neutral-300 pb-2">
-                  <span className="text-neutral-500">Status Gate:</span>
-                  <span className="text-black font-bold">HTTP 402 → 200 OK</span>
-                </div>
-                <div className="flex items-center justify-between border-b border-neutral-300 pb-2">
-                  <span className="text-neutral-500">USPS DPV:</span>
-                  <span className="text-black font-semibold">Code Y (Deliverable)</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-neutral-500">HCS Topic:</span>
-                  <a
-                    href="https://hashscan.io/testnet"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-black hover:underline font-bold"
+              <div className="ad402-slot mb-4 min-h-[260px] flex flex-col justify-between">
+                <div className="flex flex-col justify-between h-full font-mono text-black space-y-3">
+                  <div className="flex items-center justify-between border-b border-neutral-200 pb-2">
+                    <div className="flex items-center gap-1.5 text-xs">
+                      <span className="w-2 h-2 rounded-full bg-black animate-pulse" />
+                      <span className="font-bold text-black">ORACLE GATEWAY</span>
+                    </div>
+                    <span className="text-[10px] px-2 py-0.5 bg-neutral-100 border border-neutral-300 text-black">
+                      HTTP 402
+                    </span>
+                  </div>
+
+                  <div className="space-y-2 text-xs">
+                    <div className="flex items-center justify-between border-b border-neutral-200 pb-1.5">
+                      <span className="text-neutral-500">Endpoint:</span>
+                      <span className="text-black font-mono text-[11px] truncate max-w-[160px]">/api/x402/property-oracle</span>
+                    </div>
+                    <div className="flex items-center justify-between border-b border-neutral-200 pb-1.5">
+                      <span className="text-neutral-500">Status Gate:</span>
+                      <span className="text-black font-bold">HTTP 402 → 200 OK</span>
+                    </div>
+                    <div className="flex items-center justify-between border-b border-neutral-200 pb-1.5">
+                      <span className="text-neutral-500">USPS DPV:</span>
+                      <span className="text-black font-semibold">Code Y (Deliverable)</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-neutral-500">HCS Topic:</span>
+                      <a
+                        href="https://hashscan.io/testnet"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-black hover:underline font-bold"
+                      >
+                        0.0.4491823 ↗
+                      </a>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => setIsTokenizeOpen(true)}
+                    className="w-full bg-black text-white py-2 text-xs font-bold border border-black hover:bg-neutral-800 transition cursor-pointer"
                   >
-                    0.0.567812 ↗
-                  </a>
+                    Inspect x402 Handshake
+                  </button>
                 </div>
               </div>
             </div>
-            <button
-              onClick={() => setIsTokenizeOpen(true)}
-              className="w-full bg-black text-white py-2.5 text-xs font-mono font-bold border border-black hover:bg-neutral-800 transition cursor-pointer"
-            >
-              Inspect x402 Handshake
-            </button>
+            <div className="text-[11px] text-neutral-600 font-mono flex items-center justify-between pt-2 border-t border-neutral-300">
+              <span>Oracle Rail:</span>
+              <span className="text-black font-bold">Chainlink + USPS DPV</span>
+            </div>
           </div>
         </div>
 

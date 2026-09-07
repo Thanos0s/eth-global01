@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect, useState, useRef } from "react";
-import { HcsAuditBadge } from "./HcsAuditBadge";
 
 export interface InvestorStreamDashboardProps {
   propertyAddress?: string;
@@ -25,14 +24,13 @@ export function InvestorStreamDashboard({
 
   const [currentYield, setCurrentYield] = useState<number>(initialBalance);
   const [isStreaming, setIsStreaming] = useState<boolean>(true);
-  const [lastClaimedTime, setLastClaimedTime] = useState<Date | null>(null);
   const [isClaiming, setIsClaiming] = useState<boolean>(false);
   const [claimSuccess, setClaimSuccess] = useState<boolean>(false);
 
   const startRef = useRef<number>(Date.now());
   const initialRef = useRef<number>(initialBalance);
 
-  // High-frequency animation loop for smooth real-time ticking balance (100ms)
+  // High-frequency animation loop for smooth real-time ticking balance (80ms)
   useEffect(() => {
     if (!isStreaming) return;
 
@@ -47,11 +45,9 @@ export function InvestorStreamDashboard({
 
   const handleClaim = async () => {
     setIsClaiming(true);
-    // Simulate transaction on Hedera / Base Sepolia
-    await new Promise((r) => setTimeout(r, 1200));
+    await new Promise((r) => setTimeout(r, 1000));
     setIsClaiming(false);
     setClaimSuccess(true);
-    setLastClaimedTime(new Date());
     initialRef.current = 0;
     startRef.current = Date.now();
     setCurrentYield(0);
@@ -60,108 +56,67 @@ export function InvestorStreamDashboard({
   };
 
   return (
-    <div className="rounded-2xl border border-neutral-300 bg-white p-6 text-black shadow-lg">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-neutral-200 pb-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="relative flex h-3 w-3">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-black opacity-75"></span>
-              <span className="relative inline-flex h-3 w-3 rounded-full bg-black"></span>
-            </span>
-            <span className="text-xs font-semibold uppercase tracking-wider text-black">
-              Active Superfluid CFA Stream
-            </span>
-          </div>
-          <h3 className="mt-1 text-lg font-bold text-black">{propertyAddress}</h3>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <span className="rounded-full bg-neutral-100 px-3 py-1 text-xs font-mono text-black border border-neutral-300">
-            Base Sepolia (fUSDCx)
-          </span>
-          <span className="rounded-full bg-neutral-100 px-3 py-1 text-xs font-mono text-neutral-600 border border-neutral-300">
-            Hedera HTS (Shares)
+    <div className="flex flex-col justify-between h-full font-mono text-black space-y-3">
+      {/* Top Status Header */}
+      <div className="flex items-center justify-between border-b border-neutral-200 pb-2">
+        <div className="flex items-center gap-1.5 text-xs">
+          <span className="w-2 h-2 rounded-full bg-black animate-pulse" />
+          <span className="font-bold text-black truncate max-w-[180px]">
+            {propertyAddress.split(",")[0]}
           </span>
         </div>
+        <span className="text-[10px] px-2 py-0.5 bg-neutral-100 border border-neutral-300 text-black">
+          Base Sepolia
+        </span>
       </div>
 
-      {/* Main Streaming Ticker Counter */}
-      <div className="my-6 rounded-xl bg-neutral-50 p-6 border border-neutral-300 text-center relative overflow-hidden">
-        <div className="absolute top-0 right-0 p-3 opacity-10">
-          <svg className="w-24 h-24 text-black" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-          </svg>
+      {/* Main Streaming Counter */}
+      <div className="text-center py-2.5 px-2 bg-neutral-50 border border-neutral-200">
+        <div className="text-[10px] text-neutral-500 uppercase tracking-widest font-semibold">
+          Accrued Rental Yield (Live)
         </div>
-
-        <span className="text-xs uppercase tracking-widest text-neutral-500 font-medium">
-          Accrued Rental Yield (Real-Time)
-        </span>
-        <div className="mt-2 text-4xl sm:text-5xl font-mono font-extrabold tracking-tight text-black">
+        <div className="text-2xl sm:text-3xl font-extrabold tracking-tight text-black tabular-nums my-1">
           ${currentYield.toFixed(6)}
         </div>
-
-        <div className="mt-4 flex flex-wrap justify-center items-center gap-6 text-xs text-neutral-700 font-mono">
-          <div>
-            <span className="text-neutral-500 block text-[11px]">Flow Rate</span>
-            <span className="text-black font-bold">
-              +${flowRatePerSec.toFixed(8)} / sec
-            </span>
-          </div>
-          <div className="h-4 w-px bg-neutral-300" />
-          <div>
-            <span className="text-neutral-500 block text-[11px]">Your Share ({sharePercentage}%)</span>
-            <span className="text-black font-semibold">${investorMonthlyRent.toFixed(2)} / mo</span>
-          </div>
-          <div className="h-4 w-px bg-neutral-300" />
-          <div>
-            <span className="text-neutral-500 block text-[11px]">Total Property Rent</span>
-            <span className="text-black font-semibold">${monthlyRent.toLocaleString()} / mo</span>
-          </div>
+        <div className="text-[11px] text-neutral-600">
+          Flow Rate: <span className="font-bold text-black">+${flowRatePerSec.toFixed(8)}/s</span>
         </div>
       </div>
 
-      {/* Actions and Audit Section */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between gap-3">
-          <button
-            onClick={handleClaim}
-            disabled={isClaiming || currentYield <= 0.0001}
-            className="flex-1 rounded-xl bg-black px-5 py-3 text-sm font-semibold text-white border border-black hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all transform active:scale-[0.99] flex items-center justify-center gap-2 cursor-pointer"
-          >
-            {isClaiming ? (
-              <>
-                <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
-                </svg>
-                Settling Yield on Hedera...
-              </>
-            ) : (
-              <>Claim Accrued Yield (${currentYield.toFixed(4)})</>
-            )}
-          </button>
-
-          <button
-            onClick={() => setIsStreaming(!isStreaming)}
-            className="rounded-xl border border-neutral-300 bg-white px-4 py-3 text-xs font-medium text-black hover:bg-neutral-100 transition-colors cursor-pointer"
-          >
-            {isStreaming ? "Pause Stream View" : "Resume Stream"}
-          </button>
+      {/* Share and Rent Metrics */}
+      <div className="grid grid-cols-2 gap-2 text-[11px] border-t border-neutral-200 pt-2">
+        <div>
+          <span className="text-neutral-500 block text-[10px]">Your Equity ({sharePercentage}%)</span>
+          <span className="font-bold text-black">${investorMonthlyRent.toFixed(2)} / mo</span>
         </div>
-
-        {claimSuccess && (
-          <div className="p-3 bg-neutral-100 border border-neutral-300 rounded-xl text-xs text-black text-center animate-fade-in font-mono">
-            ✓ Successfully claimed yield! Settled via Hedera Scheduled Transaction.
-          </div>
-        )}
-
-        {/* HCS Verifiable Audit Trail */}
-        <HcsAuditBadge
-          topicId="0.0.4491823"
-          sequenceNumber={83526}
-          txId="0.0.4491823@1788783526.000000000"
-        />
+        <div>
+          <span className="text-neutral-500 block text-[10px]">Total Property Rent</span>
+          <span className="font-bold text-black">${monthlyRent.toLocaleString()} / mo</span>
+        </div>
       </div>
+
+      {/* Action Controls */}
+      <div className="flex items-center gap-2 pt-1">
+        <button
+          onClick={handleClaim}
+          disabled={isClaiming || currentYield <= 0.0001}
+          className="flex-1 bg-black text-white px-3 py-2 text-xs font-bold border border-black hover:bg-neutral-800 disabled:opacity-40 transition cursor-pointer"
+        >
+          {isClaiming ? "Settling..." : `Claim Yield ($${currentYield.toFixed(2)})`}
+        </button>
+        <button
+          onClick={() => setIsStreaming(!isStreaming)}
+          className="bg-white text-black px-3 py-2 text-xs border border-neutral-300 hover:bg-neutral-100 transition cursor-pointer whitespace-nowrap"
+        >
+          {isStreaming ? "Pause Stream" : "Resume"}
+        </button>
+      </div>
+
+      {claimSuccess && (
+        <div className="text-[10px] bg-neutral-100 border border-neutral-300 p-1.5 text-center text-black font-semibold">
+          ✓ Yield Claimed! Settled via Hedera Scheduled Tx
+        </div>
+      )}
     </div>
   );
 }
