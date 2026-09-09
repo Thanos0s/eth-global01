@@ -128,7 +128,10 @@ export function EvmWalletProvider({ children }: { children: ReactNode }) {
         console.warn("Could not switch to Sepolia network automatically:", chainErr);
       }
     } catch (cause) {
-      const message = cause instanceof Error ? cause.message : "Failed to connect the wallet.";
+      let message = cause instanceof Error ? cause.message : "Failed to connect the wallet.";
+      if (message.toLowerCase().includes("amoy") || message.includes("80002")) {
+        message = "MetaMask is stuck on Polygon Amoy. Open MetaMask and switch your network to Sepolia.";
+      }
       setError(message);
     } finally {
       setConnecting(false);
