@@ -2,15 +2,14 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build LiquidityStream on top of the Mint & Chill architecture, transforming it into an autonomous real-estate yield streaming engine featuring an x402-gated Hedera property oracle (Blocky402), HCS verifiable audit trails, Superfluid CFA per-second yield streaming on Base Sepolia, and compliance-enforcing Hermes MCP tools.
-
-**Architecture:** Single-repo unified container (`apps/platform` Next.js storefront/API + `apps/agent` Hermes Python operator). The Next.js backend serves the x402-gated USPS property oracle, HCS audit logger, and simulated rent bridge. Base Sepolia hosts `PropertyRegistry.sol` and `YieldVault.sol` (Superfluid CFA). Hermes operates autonomous MCP servers for x402 address verification and Superfluid stream orchestration.
+**Goal:** Build Prism 8 Real-Estate Yield Streaming Engine, transforming real estate tokenization into an autonomous real-estate yield streaming engine featuring an x402-gated Hedera property oracle (Blocky402), HCS verifiable audit trails, Superfluid CFA per-second yield streaming on Base Sepolia, and compliance-enforcing Hermes MCP tools.
+- Preserve the single-container Railway deploy model (`apps/agent/server.py` reverse proxying `apps/platform`). Next.js storefront/API + `apps/agent` Hermes Python operator). The Next.js backend serves the x402-gated USPS property oracle, HCS audit logger, and simulated rent bridge. Base Sepolia hosts `PropertyRegistry.sol` and `YieldVault.sol` (Superfluid CFA). Hermes operates autonomous MCP servers for x402 address verification and Superfluid stream orchestration.
 
 **Tech Stack:** TypeScript, Next.js 15, React 19, `@hiero-ledger/sdk` (Hedera), Python 3.11+, Web3.py, Solidity, Superfluid CFAv1, Chainlink Functions, TailwindCSS.
 
 ## Global Constraints
 - Target testnets: Hedera Testnet for x402 & HTS tokenization; Base Sepolia for Superfluid CFA and Chainlink Functions.
-- Preserve Mint & Chill's single-container Railway deploy model (`apps/agent/server.py` reverse proxying `apps/platform`).
+- Preserve the single-container Railway deploy model (`apps/agent/server.py` reverse proxying `apps/platform`).
 - Zero API keys or subscriptions required for agent operations—pure x402 machine-to-machine payment.
 
 ---

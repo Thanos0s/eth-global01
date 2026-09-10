@@ -3,7 +3,7 @@
 
 - **Date:** 2026-09-07
 - **Target Tracks:** Hedera (x402 Agentic Economy Challenge), Superfluid / EVM (Base Sepolia), Chainlink Functions, World ID
-- **Base Architecture:** Mint & Chill (single-repo unified Railway container with Hermes AI Agent + MCP + Next.js Platform)
+- **Base Architecture:** Prism 8 unified Railway container with Hermes AI Agent + MCP + Next.js Platform
 
 ---
 

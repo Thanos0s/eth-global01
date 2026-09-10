@@ -2,7 +2,7 @@
 
 # Prism 8 — Autonomous Real-Estate Yield Streaming Engine
 
-**Prism 8** turns the Mint & Chill agent-operated RWA platform into a specialized **Real-Estate Yield Streaming Engine**. It combines **Hedera x402** machine-to-machine payments, **Hedera Token Service (HTS)** fractionalization, **Superfluid CFA** per-second yield streaming on Base Sepolia, **The Graph** autonomous indexing & Model Context Protocol (MCP) tooling, and **USPS Chainlink Functions** physical address validation.
+**Prism 8** is a next-generation autonomous **Real-Estate Tokenization & Continuous Yield Streaming Engine**. It combines **Hedera x402** machine-to-machine payments, **Hedera Token Service (HTS)** fractionalization, **Superfluid CFA** per-second yield streaming on Base Sepolia, **The Graph** autonomous indexing & Model Context Protocol (MCP) tooling, and **USPS Chainlink Functions** physical address validation.
 
 Built for **ETHGlobal 2026**:
 * **Hedera Track**: Agentic Economy x402 Machine-to-Machine Challenge
@@ -187,7 +187,6 @@ See [`docs/demo-script.md`](docs/demo-script.md) for the step-by-step judge walk
 ---
 
 ## 📜 Credits & Sponsors
-- [Mint & Chill](https://github.com/Tanguyvans/ethlisbon)
 - [Hermes Agent](https://github.com/NousResearch/hermes-agent) by [Nous Research](https://nousresearch.com/)
 - [Blocky402 Facilitator](https://blocky402.com/) & [Hedera Hashgraph](https://hedera.com/)
 - [The Graph](https://thegraph.com/)
