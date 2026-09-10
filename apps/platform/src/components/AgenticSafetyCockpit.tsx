@@ -51,7 +51,39 @@ export function AgenticSafetyCockpit({ onWorkflowComplete }: AgenticSafetyCockpi
     try {
       const rawProvider = getMetaMaskProvider();
       if (!rawProvider) {
-        throw new Error("EVM wallet (MetaMask) is required to sign the Session Key delegation.");
+        throw new Error("MetaMask extension was not detected. Please install MetaMask.");
+      }
+
+      // 1. Explicitly authorize accounts on current origin
+      let accounts: string[] = [];
+      try {
+        accounts = (await rawProvider.request({ method: "eth_requestAccounts" })) as string[];
+      } catch (authErr: any) {
+        if (authErr.code === 4001 || authErr.message?.includes("rejected")) {
+          throw new Error("Connection request declined in MetaMask.");
+        }
+        throw new Error(authErr.message || "MetaMask authorization failed.");
+      }
+
+      if (!accounts || accounts.length === 0) {
+        throw new Error("No authorized accounts found. Please unlock your MetaMask wallet.");
+      }
+
+      // 2. Ensure chain is Sepolia (0xaa36a7)
+      try {
+        const chainId = await rawProvider.request({ method: "eth_chainId" });
+        if (chainId !== "0xaa36a7") {
+          try {
+            await rawProvider.request({
+              method: "wallet_switchEthereumChain",
+              params: [{ chainId: "0xaa36a7" }],
+            });
+          } catch (switchErr: any) {
+            console.warn("Could not switch to Sepolia automatically:", switchErr);
+          }
+        }
+      } catch {
+        // Ignore chain check error
       }
 
       const provider = new BrowserProvider(rawProvider);
