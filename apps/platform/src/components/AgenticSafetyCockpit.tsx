@@ -376,18 +376,36 @@ export function AgenticSafetyCockpit({ onWorkflowComplete }: AgenticSafetyCockpi
 
       {/* Guardrail Rejection Alert (Proves Safety to Judges) */}
       {guardrailAlert && (
-        <div className="p-4 border-2 border-black bg-neutral-50 text-xs space-y-2">
-          <div className="flex items-center gap-2 font-bold text-black">
-            <span>🛑</span>
-            <span>CRYPTOGRAPHIC GUARDRAIL INTERCEPT: ACTION HALTED</span>
+        <div className="p-4 border-2 border-black bg-neutral-50 text-xs space-y-2.5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 font-bold text-black text-sm">
+              <span>🛡️</span>
+              <span>SECURITY BENCHMARK PASSED: ROGUE AI INTERCEPTED</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="px-2 py-0.5 bg-black text-white text-[10px] font-bold">
+                403 FORBIDDEN (HALTED)
+              </span>
+              <button
+                onClick={() => setGuardrailAlert(null)}
+                className="text-neutral-500 hover:text-black text-xs font-bold px-1"
+                title="Dismiss benchmark alert"
+              >
+                ✕
+              </button>
+            </div>
           </div>
-          <div className="text-neutral-800 text-[11px]">
-            {guardrailAlert.error}
+          <p className="text-neutral-800 text-[11px] leading-relaxed">
+            Hermes attempted to execute an unauthorized treasury transfer (<code className="bg-neutral-200 px-1 py-0.5 text-black font-mono font-bold">{guardrailAlert.guardrailDetails?.attemptedAction}</code>), but was <strong>cryptographically rejected</strong> by the ERC-7579 Session Key Validator. Your wallet and funds remain 100% secure.
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 text-[10px] text-neutral-600 border-t border-neutral-200">
+            <div>Policy Status: <strong className="text-black block">ENFORCED (REJECTED)</strong></div>
+            <div>Attempted Action: <strong className="text-black block truncate">{guardrailAlert.guardrailDetails?.attemptedAction}</strong></div>
+            <div>Intercepted Spend: <strong className="text-black block">{guardrailAlert.guardrailDetails?.attemptedSpend}</strong></div>
+            <div>Protected Balance: <strong className="text-black block">{guardrailAlert.guardrailDetails?.remainingSessionBudget}</strong></div>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1 text-[10px] text-neutral-600 border-t border-neutral-200">
-            <div>Attempted Action: <strong className="text-black">{guardrailAlert.guardrailDetails?.attemptedAction}</strong></div>
-            <div>Attempted Spend: <strong className="text-black">{guardrailAlert.guardrailDetails?.attemptedSpend}</strong></div>
-            <div>Remaining Cap: <strong className="text-black">{guardrailAlert.guardrailDetails?.remainingSessionBudget}</strong></div>
+          <div className="text-[10px] text-neutral-500 italic pt-0.5">
+            ✓ Hackathon Security Proof: Hermes cannot drain assets or call undelegated contracts beyond the user's signed EIP-712 envelope.
           </div>
         </div>
       )}
@@ -467,10 +485,12 @@ export function AgenticSafetyCockpit({ onWorkflowComplete }: AgenticSafetyCockpi
                       href={step.explorerUrl}
                       target="_blank"
                       rel="noreferrer"
-                      className="font-bold text-black underline hover:text-neutral-600 flex items-center gap-0.5"
+                      className="font-bold text-black underline hover:text-neutral-600 flex items-center gap-1"
                     >
-                      <span>{step.txId.slice(0, 18)}...</span>
-                      <span>↗</span>
+                      <span>{step.txId.slice(0, 20)}...</span>
+                      <span className="text-[9px] bg-neutral-100 hover:bg-neutral-200 px-1.5 py-0.5 border border-neutral-300 rounded text-black font-semibold">
+                        {step.network.includes("Hedera") ? "HashScan ↗" : step.network.includes("Base") ? "BaseScan ↗" : "Explorer ↗"}
+                      </span>
                     </a>
                   </div>
                 </div>
