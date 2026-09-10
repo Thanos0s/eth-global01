@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { BrowserProvider } from "ethers";
 import { useEvmWallet } from "@/hooks/useEvmWallet";
 import { getMetaMaskProvider } from "@/lib/evm/browserProvider";
+import { TheGraphInspectorModal } from "./TheGraphInspectorModal";
 
 export interface AgenticSafetyCockpitProps {
   onWorkflowComplete?: (result: any) => void;
@@ -21,6 +22,7 @@ export function AgenticSafetyCockpit({ onWorkflowComplete }: AgenticSafetyCockpi
   const [executionResult, setExecutionResult] = useState<any | null>(null);
   const [guardrailAlert, setGuardrailAlert] = useState<any | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isGraphModalOpen, setIsGraphModalOpen] = useState<boolean>(false);
 
   // Fetch active session on mount
   useEffect(() => {
@@ -480,18 +482,46 @@ export function AgenticSafetyCockpit({ onWorkflowComplete }: AgenticSafetyCockpi
                     Network: <span className="text-black font-semibold">{step.network}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-neutral-500">Tx:</span>
-                    <a
-                      href={step.explorerUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="font-bold text-black underline hover:text-neutral-600 flex items-center gap-1"
-                    >
-                      <span>{step.txId.slice(0, 20)}...</span>
-                      <span className="text-[9px] bg-neutral-100 hover:bg-neutral-200 px-1.5 py-0.5 border border-neutral-300 rounded text-black font-semibold">
-                        {step.network.includes("Hedera") ? "HashScan ↗" : step.network.includes("Base") ? "BaseScan ↗" : "Explorer ↗"}
-                      </span>
-                    </a>
+                    {step.network?.includes("The Graph") ? (
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-neutral-500">IPFS:</span>
+                        <button
+                          type="button"
+                          onClick={() => setIsGraphModalOpen(true)}
+                          className="font-bold text-black underline hover:text-neutral-600 flex items-center gap-1 cursor-pointer"
+                          title="Open interactive Subgraph Inspector Modal"
+                        >
+                          <span>{step.txId.slice(0, 16)}...</span>
+                          <span className="text-[9px] bg-black text-white px-2 py-0.5 border border-black rounded font-semibold hover:bg-neutral-800 transition">
+                            🔍 Inspect Subgraph Live ↗
+                          </span>
+                        </button>
+                        <a
+                          href="/api/subgraph"
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-[9px] bg-neutral-100 hover:bg-neutral-200 px-1.5 py-0.5 border border-neutral-300 rounded text-black font-semibold"
+                          title="Open raw GraphQL API endpoint"
+                        >
+                          API JSON ↗
+                        </a>
+                      </div>
+                    ) : (
+                      <>
+                        <span className="text-neutral-500">Tx:</span>
+                        <a
+                          href={step.explorerUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="font-bold text-black underline hover:text-neutral-600 flex items-center gap-1"
+                        >
+                          <span>{step.txId.slice(0, 20)}...</span>
+                          <span className="text-[9px] bg-neutral-100 hover:bg-neutral-200 px-1.5 py-0.5 border border-neutral-300 rounded text-black font-semibold">
+                            {step.network.includes("Hedera") ? "HashScan ↗" : step.network.includes("Base") ? "BaseScan ↗" : "Explorer ↗"}
+                          </span>
+                        </a>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
@@ -504,6 +534,12 @@ export function AgenticSafetyCockpit({ onWorkflowComplete }: AgenticSafetyCockpi
           </div>
         </div>
       )}
+
+      {/* Interactive The Graph Inspector Modal */}
+      <TheGraphInspectorModal
+        isOpen={isGraphModalOpen}
+        onClose={() => setIsGraphModalOpen(false)}
+      />
     </div>
   );
 }
