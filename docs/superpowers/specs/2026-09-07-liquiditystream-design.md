@@ -7,11 +7,10 @@
 
 ---
 
-## 1. Executive Summary & Problem Statement
+## Executive Summary
+Real-world physical real estate represents an illiquid, siloed asset class where rental yields are traditionally disbursed on monthly or quarterly cycles, creating significant friction, counterparty delay, and opaque accounting for investors. Furthermore, decentralized autonomous agents lack access to real-time, pay-per-query physical address viability checks without relying on centralized, pre-funded API subscriptions.
 
-The emerging agentic economy requires payment rails operating at machine speed: sub-second finality, predictable sub-cent fees, and native token operations without smart contract overhead. Hedera is engineered for this, but autonomous agents need real services to discover and pay for without API keys, credit cards, or manual subscriptions.
-
-**LiquidityStream** addresses this challenge directly by deploying:
+**Prism 8** addresses this challenge directly by deploying:
 1. **A live x402-gated service on Hedera Testnet**: A property verification & physical address validation oracle settled through the **Blocky402** facilitator.
 2. **An autonomous consuming agent (Hermes)**: Hermes detects HTTP 402 challenges, pays machine-to-machine micropayments in HBAR/HTS tokens, verifies physical property validity via USPS, and mints compliant real estate tokens on Hedera Token Service (HTS).
 3. **Continuous Real-Time Yield Streaming**: Rental cashflows are streamed per-second to investor wallets via **Superfluid CFA** on Base Sepolia, complemented by native **Hedera Scheduled Transactions** and verifiable payment audit trails on **Hedera Consensus Service (HCS)**.
@@ -20,7 +19,7 @@ The emerging agentic economy requires payment rails operating at machine speed: 
 
 ## 2. Bounty Qualification & Extra Points Matrix
 
-| Requirement | Implementation in LiquidityStream |
+| Requirement | Implementation in Prism 8 |
 |---|---|
 | **Host live x402-gated service on Hedera** | Hosted at `/api/x402/property-oracle`, returns HTTP 402 with Blocky402 facilitator headers. |
 | **Agent consumes service end-to-end** | Hermes MCP `usps_chainlink` catches 402, signs/submits payment on Hedera, retries with proof, receives data. |
@@ -127,7 +126,7 @@ The emerging agentic economy requires payment rails operating at machine speed: 
 - Exposes machine-readable schema for agent discovery (Universal Commerce Protocol / ACP friendly):
   ```json
   {
-    "name": "LiquidityStream Real-Estate Oracle",
+    "name": "Prism 8 Real-Estate Oracle",
     "version": "1.0.0",
     "services": [
       {

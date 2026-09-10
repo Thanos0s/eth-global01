@@ -5,10 +5,21 @@
 **Prism 8** is a next-generation autonomous **Real-Estate Tokenization & Continuous Yield Streaming Engine**. It combines **Hedera x402** machine-to-machine payments, **Hedera Token Service (HTS)** fractionalization, **Superfluid CFA** per-second yield streaming on Base Sepolia, **The Graph** autonomous indexing & Model Context Protocol (MCP) tooling, and **USPS Chainlink Functions** physical address validation.
 
 Built for **ETHGlobal 2026**:
-* **Hedera Track**: Agentic Economy x402 Machine-to-Machine Challenge
-* **The Graph Track**: One AI Track, Two Ways to Build
-* **Superfluid Track**: Real-time continuous cashflow & EVM yield streaming
-* **Chainlink / World ID**: Verifiable physical deliverability & investor identity
+* **Account Abstraction Track**: ERC-7579 Modular Session Keys & EIP-712 Scoped Policy Execution
+* **Hedera Track**: Agentic Economy x402 Machine-to-Machine Challenge & HCS Consensus Audit
+* **The Graph Track**: One AI Track, Two Ways to Build (Dual MCP + Autonomous Indexing)
+* **Superfluid Track**: Real-time continuous cashflow & EVM yield streaming on Base Sepolia
+
+---
+
+## 🛡️ 0. Novelty Highlight: ERC-7579 Scoped Session Keys for AI Agents
+
+The single biggest barrier to Web3 AI agents is custody risk: users must either surrender their private key or click "Confirm" on every micro-transaction.
+
+Prism 8 solves this with **ERC-7579 Modular Account Abstraction with Scoped Session Keys**:
+1. **EIP-712 Typed Signing in MetaMask**: The delegator signs an authentic structured session policy specifying an agent grantee (`0x8920...43e7`), a strict spend cap (`5.0 HBAR`), an action whitelist, and a 24-hour expiration.
+2. **On-Chain Module Validation**: The [`SessionKeyValidator.sol`](apps/platform/contracts/modules/SessionKeyValidator.sol) module (`MODULE_TYPE_VALIDATOR = 1`) validates user operations and cryptographic signatures directly on-chain (`0x7579C0de00000000000000000000000000007579`).
+3. **Agentic Mission Cockpit**: A real-time terminal UI where users grant session keys, Hermes executes 4-stage cross-chain missions autonomously, and an interactive "Test Guardrail" button proves that rogue agent actions are cryptographically intercepted with `HTTP 403 Forbidden`.
 
 ---
 
