@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { logHcsAuditEvent } from "@/lib/hedera/hcsAudit";
 
 export interface PropertyAddressInput {
   street: string;
@@ -115,16 +116,20 @@ export async function handlePropertyOracleRequest(
   const dpvConfirmation: "Y" | "N" = isInvalidAddress ? "N" : "Y";
   const isValid = !isInvalidAddress;
 
-  // Generate verifiable HCS audit receipt
-  const mockSeq = Math.floor(Date.now() / 1000) % 100000;
-  const hcsAudit = {
-    topicId: process.env.HEDERA_AUDIT_TOPIC_ID || "0.0.4491823",
-    sequenceNumber: mockSeq,
-    consensusTimestamp: new Date().toISOString(),
-    txId: proof.paymentTx,
-    hashscanUrl: `https://hashscan.io/testnet/transaction/${encodeURIComponent(proof.paymentTx)}`,
+  // Generate verifiable HCS audit receipt on Hedera Consensus Service
+  const hcsAudit = await logHcsAuditEvent({
     event: "X402_PAYMENT_VERIFIED",
-  };
+    propertyId: addressHash,
+    addressHash,
+    txId: proof.paymentTx,
+    payer: proof.invoiceId,
+    amount: "0.5 HBAR",
+    metadata: {
+      standardizedAddress,
+      dpvConfirmation,
+      invoiceId: proof.invoiceId,
+    },
+  });
 
   return {
     status: 200,

@@ -7,8 +7,7 @@ let providerSingleton: JsonRpcProvider | null = null;
 let signerSingleton: Wallet | null = null;
 
 export function getSepoliaProvider(): JsonRpcProvider {
-  const rpcUrl = process.env.SEPOLIA_RPC_URL?.trim();
-  if (!rpcUrl) throw new Error("SEPOLIA_RPC_URL is not configured.");
+  const rpcUrl = process.env.SEPOLIA_RPC_URL?.trim() || "https://ethereum-sepolia-rpc.publicnode.com";
   if (!providerSingleton) providerSingleton = new JsonRpcProvider(rpcUrl, SEPOLIA_CHAIN_ID);
   return providerSingleton;
 }

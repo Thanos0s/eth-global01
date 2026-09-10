@@ -7,6 +7,7 @@ import { InvestorStreamDashboard } from "./InvestorStreamDashboard";
 import { RentSimulatorPanel } from "./RentSimulatorPanel";
 import { PropertyTokenizeModal } from "./PropertyTokenizeModal";
 import { TheGraphInspectorModal } from "./TheGraphInspectorModal";
+import { AgenticSafetyCockpit } from "./AgenticSafetyCockpit";
 
 const ASSET_CATEGORY_LABELS: Record<NonNullable<TokenRecord["assetCategory"]>, string> = {
   securities: "Securities",
@@ -50,6 +51,12 @@ export default function DeployedTokenCatalog({ tokens }: { tokens: TokenRecord[]
             >
               The Graph AI Inspector
             </button>
+            <a
+              href="#safety-cockpit"
+              className="bg-black text-white px-8 py-3.5 hover:bg-neutral-800 transition-colors font-mono font-bold cursor-pointer border border-black text-center"
+            >
+              Agentic Safety Cockpit
+            </a>
             <a
               href="#instruments"
               className="bg-white text-black px-8 py-3.5 border border-black hover:bg-neutral-100 transition-colors font-mono font-semibold text-center"
@@ -178,6 +185,11 @@ export default function DeployedTokenCatalog({ tokens }: { tokens: TokenRecord[]
               <span className="text-black font-bold">Chainlink + USPS DPV</span>
             </div>
           </div>
+        </div>
+
+        {/* 2.5 Agentic Autonomy with Safety Guardrails */}
+        <div id="safety-cockpit" className="mb-16">
+          <AgenticSafetyCockpit />
         </div>
 
         {/* 3. Key Features (Ad402 Exact 3-Column Layout with Icons) */}
