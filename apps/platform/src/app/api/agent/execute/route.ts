@@ -138,7 +138,7 @@ export async function POST(req: NextRequest) {
       network: "The Graph Protocol (Sepolia Indexer)",
       status: "INDEXED",
       txId: "QmQ65v4hUvG1K3T6q21bL5f9N4d9zXJ8pD32A1f6K9z1ab",
-      explorerUrl: "https://thegraph.com/explorer",
+      explorerUrl: "/api/subgraph",
       detail: "Hermes queried live Subgraph holders. Proportional cap table derived for rental distribution.",
       timestamp: new Date().toISOString(),
     });
