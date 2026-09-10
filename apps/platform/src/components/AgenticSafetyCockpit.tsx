@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { BrowserProvider } from "ethers";
 import { useEvmWallet } from "@/hooks/useEvmWallet";
+import { getMetaMaskProvider } from "@/lib/evm/browserProvider";
 
 export interface AgenticSafetyCockpitProps {
   onWorkflowComplete?: (result: any) => void;
@@ -48,11 +49,12 @@ export function AgenticSafetyCockpit({ onWorkflowComplete }: AgenticSafetyCockpi
     setGuardrailAlert(null);
 
     try {
-      if (typeof window === "undefined" || !(window as any).ethereum) {
+      const rawProvider = getMetaMaskProvider();
+      if (!rawProvider) {
         throw new Error("EVM wallet (MetaMask) is required to sign the Session Key delegation.");
       }
 
-      const provider = new BrowserProvider((window as any).ethereum);
+      const provider = new BrowserProvider(rawProvider);
       const signer = await provider.getSigner();
       const grantor = await signer.getAddress();
 
