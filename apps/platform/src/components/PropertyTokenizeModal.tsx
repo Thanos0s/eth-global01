@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { BrowserProvider, ContractFactory } from "ethers";
 import { HcsAuditBadge } from "./HcsAuditBadge";
 import { useEvmWallet } from "@/hooks/useEvmWallet";
+import { getMetaMaskProvider } from "@/lib/evm/browserProvider";
 import artifact from "@/lib/evm/generated/CompliantRwaToken.json";
 
 export interface PropertyTokenizeModalProps {
@@ -66,9 +67,10 @@ export function PropertyTokenizeModal({
 
       // Require Wallet Signature for x402 micropayment settlement
       let paymentProofTx = "";
-      if (typeof window !== "undefined" && (window as any).ethereum) {
+      const rawProvider = getMetaMaskProvider();
+      if (rawProvider) {
         setVerificationStep("Step 2: 402 intercepted! Requesting x402 payment signature in your wallet...");
-        const provider = new BrowserProvider((window as any).ethereum);
+        const provider = new BrowserProvider(rawProvider);
         const signer = await provider.getSigner();
         const signerAddress = await signer.getAddress();
 
@@ -133,11 +135,12 @@ export function PropertyTokenizeModal({
 
     try {
       if (network === "EVM") {
-        if (typeof window === "undefined" || !(window as any).ethereum) {
+        const rawProvider = getMetaMaskProvider();
+        if (!rawProvider) {
           throw new Error("MetaMask or EVM wallet is required to deploy on Sepolia.");
         }
 
-        const provider = new BrowserProvider((window as any).ethereum);
+        const provider = new BrowserProvider(rawProvider);
         const signer = await provider.getSigner();
         const userAddress = await signer.getAddress();
 
@@ -282,8 +285,9 @@ export function PropertyTokenizeModal({
       } else {
         // Hedera Testnet Deployment
         setVerificationStep("Requesting deployment signature in wallet...");
-        if (typeof window !== "undefined" && (window as any).ethereum) {
-          const provider = new BrowserProvider((window as any).ethereum);
+        const rawProvider = getMetaMaskProvider();
+        if (rawProvider) {
+          const provider = new BrowserProvider(rawProvider);
           const signer = await provider.getSigner();
           await signer.signMessage(`[Prism 8] Authorize Hedera HTS Tokenization: ${tokenName} (${tokenSymbol})`);
         }

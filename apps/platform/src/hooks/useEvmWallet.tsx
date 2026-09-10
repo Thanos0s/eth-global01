@@ -4,6 +4,7 @@ import { BrowserProvider, Contract, getAddress } from "ethers";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import artifact from "@/lib/evm/generated/CompliantRwaToken.json";
 import { SEPOLIA_CHAIN_ID_HEX } from "@/lib/chains";
+import { getMetaMaskProvider } from "@/lib/evm/browserProvider";
 
 type EthereumProvider = {
   request(args: { method: string; params?: unknown[] }): Promise<unknown>;
@@ -50,7 +51,7 @@ export function EvmWalletProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const ethereum = window.ethereum as EthereumProvider | undefined;
+    const ethereum = getMetaMaskProvider() as EthereumProvider | undefined;
     if (!ethereum) return;
     const sync = (accounts: unknown) => {
       const first = Array.isArray(accounts) && typeof accounts[0] === "string" ? accounts[0] : null;
@@ -141,7 +142,7 @@ export function EvmWalletProvider({ children }: { children: ReactNode }) {
   const disconnect = useCallback(() => setAccountId(null), []);
 
   const approveAllowance = useCallback(async (tokenId: string, spender: string, amount: number) => {
-    const ethereum = window.ethereum as EthereumProvider | undefined;
+    const ethereum = getMetaMaskProvider() as EthereumProvider | undefined;
     if (!ethereum || !accountId) throw new Error("Connect a Sepolia wallet first.");
     await switchToSepolia(ethereum);
     const provider = new BrowserProvider(ethereum);
