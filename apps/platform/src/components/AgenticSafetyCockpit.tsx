@@ -8,6 +8,9 @@ export interface AgenticSafetyCockpitProps {
   onWorkflowComplete?: (result: any) => void;
 }
 
+const VALIDATOR_MODULE_ADDRESS = "0x7579C0de00000000000000000000000000007579";
+const HERMES_AGENT_ADDRESS = "0x89205A3A3b2A69De6Dbf7f01ED13B2108B2c43e7";
+
 export function AgenticSafetyCockpit({ onWorkflowComplete }: AgenticSafetyCockpitProps) {
   const evm = useEvmWallet();
 
@@ -38,7 +41,7 @@ export function AgenticSafetyCockpit({ onWorkflowComplete }: AgenticSafetyCockpi
     }
   };
 
-  // 1. Grant/Rotate Session Key with Wallet Signature
+  // 1. Grant/Rotate Session Key with EIP-712 Typed Signature (ERC-7579 standard)
   const handleGrantSessionKey = async () => {
     setIsSigningSession(true);
     setError(null);
@@ -67,18 +70,56 @@ export function AgenticSafetyCockpit({ onWorkflowComplete }: AgenticSafetyCockpi
         durationHours: 24,
       };
 
-      const sessionMessage = [
-        "[Prism 8] Cryptographic Agent Session Key Delegation (ERC-7579)",
-        `Grantor: ${grantor}`,
-        "Grantee Agent: Hermes Autonomous Operator (01)",
-        "Max Spend Cap: 5.0 HBAR equivalent",
-        "Max Yield Flow: $5,000 USD / month",
-        `Allowed Actions: ${policyConstraints.allowedActions.join(", ")}`,
-        "Validity: 24 Hours",
-        `Nonce: ${Date.now()}`,
-      ].join("\n");
+      const nonce = Date.now();
+      const validUntil = Math.floor(Date.now() / 1000) + 24 * 3600;
 
-      const signature = await signer.signMessage(sessionMessage);
+      const domain = {
+        name: "Prism8SessionValidator",
+        version: "1",
+        chainId: 11155111,
+        verifyingContract: VALIDATOR_MODULE_ADDRESS,
+      };
+
+      const types = {
+        SessionPolicy: [
+          { name: "grantor", type: "address" },
+          { name: "agent", type: "address" },
+          { name: "maxSpendHbar", type: "uint256" },
+          { name: "maxFlowMonthlyUsd", type: "uint256" },
+          { name: "validUntil", type: "uint256" },
+          { name: "nonce", type: "uint256" },
+        ],
+      };
+
+      const value = {
+        grantor,
+        agent: HERMES_AGENT_ADDRESS,
+        maxSpendHbar: BigInt(5 * 1e18),
+        maxFlowMonthlyUsd: BigInt(5000),
+        validUntil: BigInt(validUntil),
+        nonce: BigInt(nonce),
+      };
+
+      let signature: string;
+      let rawMessage: string | undefined;
+
+      try {
+        // Primary: EIP-712 Structured Typed Data Signing
+        signature = await signer.signTypedData(domain, types, value);
+      } catch (typedErr: any) {
+        // Fallback to personal_sign if user wallet doesn't support typed data
+        rawMessage = [
+          "[Prism 8] Cryptographic Agent Session Key Delegation (ERC-7579)",
+          `Grantor: ${grantor}`,
+          `Grantee Agent: ${HERMES_AGENT_ADDRESS}`,
+          "Max Spend Cap: 5.0 HBAR equivalent",
+          "Max Yield Flow: $5,000 USD / month",
+          `Allowed Actions: ${policyConstraints.allowedActions.join(", ")}`,
+          `Validity: 24 Hours (until ${validUntil})`,
+          `Nonce: ${nonce}`,
+        ].join("\n");
+        signature = await signer.signMessage(rawMessage);
+      }
 
       const res = await fetch("/api/agent/session", {
         method: "POST",
@@ -87,6 +128,8 @@ export function AgenticSafetyCockpit({ onWorkflowComplete }: AgenticSafetyCockpi
           grantor,
           signature,
           constraints: policyConstraints,
+          nonce,
+          rawMessage,
         }),
       });
 
@@ -186,14 +229,14 @@ export function AgenticSafetyCockpit({ onWorkflowComplete }: AgenticSafetyCockpi
           <div className="flex items-center gap-2 mb-1">
             <span className="w-2.5 h-2.5 rounded-full bg-black animate-pulse" />
             <span className="text-xs font-bold uppercase tracking-wider text-black">
-              Agentic Autonomy with Safety Guardrails
+              ERC-7579 Account Abstraction & Guardrails
             </span>
           </div>
           <h2 className="text-xl font-bold text-black tracking-tight">
             Hermes Autonomous Mission Cockpit
           </h2>
           <p className="text-xs text-neutral-600 mt-0.5">
-            Autonomous AI agents executing real on-chain workflows under cryptographically signed session constraints (ERC-7579).
+            Autonomous AI agents executing real on-chain workflows under cryptographically signed session constraints (EIP-712 / ERC-7579).
           </p>
         </div>
 
@@ -203,7 +246,7 @@ export function AgenticSafetyCockpit({ onWorkflowComplete }: AgenticSafetyCockpi
             disabled={isSigningSession}
             className="px-4 py-2 bg-white text-black border border-black text-xs font-bold hover:bg-neutral-100 transition cursor-pointer"
           >
-            {isSigningSession ? "Signing in Wallet..." : "✍️ Grant Session Key"}
+            {isSigningSession ? "Signing EIP-712 in Wallet..." : "✍️ Grant Session Key (EIP-712)"}
           </button>
           <button
             onClick={handleRunAutonomousPipeline}
@@ -226,18 +269,21 @@ export function AgenticSafetyCockpit({ onWorkflowComplete }: AgenticSafetyCockpi
 
       {/* Grid: 3 Safety Parameters */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-        {/* Card 1: Session Status */}
+        {/* Card 1: Session Status & ERC-7579 Validator */}
         <div className="p-3.5 border border-neutral-300 bg-neutral-50 space-y-1.5">
           <div className="flex items-center justify-between">
-            <span className="text-neutral-600">Session Status</span>
+            <span className="text-neutral-600">ERC-7579 Module</span>
             <span className="px-2 py-0.5 bg-black text-white text-[10px] font-bold">
-              {session?.status || "ACTIVE"}
+              {session?.signatureType === "EIP712" ? "EIP-712 TYPED" : (session?.status || "ACTIVE")}
             </span>
           </div>
           <div className="text-black font-bold text-sm">
             {session ? `${session.sessionId.slice(0, 16)}...` : "session_prism8_genesis"}
           </div>
-          <div className="text-[11px] text-neutral-500 truncate">
+          <div className="text-[11px] text-neutral-600 truncate">
+            Validator: <span className="text-black font-semibold">SessionKeyValidator.sol</span>
+          </div>
+          <div className="text-[10px] text-neutral-500 truncate">
             Grantor: {session?.grantor || (evm.accountId ? `${evm.accountId.slice(0, 10)}...` : "0x7099...79C8")}
           </div>
         </div>
@@ -333,6 +379,27 @@ export function AgenticSafetyCockpit({ onWorkflowComplete }: AgenticSafetyCockpi
               Execution ID: {executionResult.executionId}
             </span>
           </div>
+
+          {/* ERC-7579 Verification Badge */}
+          {executionResult.sessionProof && (
+            <div className="p-3 bg-white border border-neutral-300 text-[11px] space-y-1">
+              <div className="flex items-center justify-between text-black font-bold">
+                <span className="flex items-center gap-1.5">
+                  <span className="text-black">🔒</span>
+                  <span>{executionResult.sessionProof.standard}</span>
+                </span>
+                <span className="px-2 py-0.5 bg-neutral-100 border border-neutral-300 text-[10px]">
+                  VERIFIED DELEGATION
+                </span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 text-[10px] text-neutral-600">
+                <div>Grantor: <span className="font-mono text-black font-semibold">{executionResult.sessionProof.grantor.slice(0, 8)}...</span></div>
+                <div>Agent: <span className="font-mono text-black font-semibold">{executionResult.sessionProof.agent.slice(0, 8)}...</span></div>
+                <div>Budget Limit: <span className="text-black font-semibold">{executionResult.sessionProof.delegatedBudget}</span></div>
+                <div>Validator: <span className="font-mono text-black font-semibold">SessionKeyValidator</span></div>
+              </div>
+            </div>
+          )}
 
           <div className="space-y-3">
             {executionResult.steps?.map((step: any) => (

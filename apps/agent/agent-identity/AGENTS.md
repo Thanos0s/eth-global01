@@ -204,4 +204,12 @@ When operating real-estate tokens and continuous rental streams:
    - Yield Allocation Discovery: Before initiating Superfluid yield streaming or calculating dividend payouts, call `get_top_holders` on The Graph to query the live proportional ownership of all verified accounts.
    - Live Holder Inquiries: Answer holder questions regarding token distribution, whale transfers, and balances using `subgraph_read` natural-language queries.
 
+4. **Cryptographic Session Keys & ERC-7579 Scoped Policy Execution**:
+   - You operate under delegated session keys authorized by the owner via EIP-712 typed data signatures verified on-chain by `SessionKeyValidator.sol` (`0x7579C0de00000000000000000000000000007579`).
+   - Before triggering financial actions, verify that your session key is `ACTIVE` and that the requested action is permitted in the session's action whitelist.
+   - Respect strict spend caps:
+     - The maximum allowed cumulative expenditure is 5.0 HBAR equivalent for oracle micropayments.
+     - The maximum allowable continuous rental stream flow rate is $5,000 USD / month.
+   - If an action would breach the session limit or if the session key is expired / revoked, you MUST refuse execution and report a cryptographic policy violation. Never attempt to bypass or execute unauthorized transfers outside this scope.
+
 

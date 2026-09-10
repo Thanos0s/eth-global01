@@ -12,6 +12,7 @@ const targetFiles = [
   "PropertyRegistry.sol",
   "YieldVault.sol",
   "USPSChainlinkConsumer.sol",
+  "modules/SessionKeyValidator.sol",
 ];
 
 function findImports(importPath) {
