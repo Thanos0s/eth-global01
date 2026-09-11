@@ -274,40 +274,40 @@ export function AgenticSafetyCockpit({ onWorkflowComplete }: AgenticSafetyCockpi
   const budgetPercent = session ? (remainingHbar / session.constraints.maxSpendHbar) * 100 : 90;
 
   return (
-    <div className="bg-white border border-neutral-300 p-6 shadow-sm font-mono text-black space-y-6">
+    <div className="bg-white border-2 border-neutral-300 p-8 sm:p-10 shadow-lg font-mono text-black space-y-8 w-full">
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-neutral-200 pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-200 pb-6">
         <div>
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex items-center gap-2 mb-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-black animate-pulse" />
             <span className="text-xs font-bold uppercase tracking-wider text-black">
-              ERC-7579 Account Abstraction & Guardrails
+              ERC-7579 Account Abstraction &amp; Guardrails
             </span>
           </div>
-          <h2 className="text-xl font-bold text-black tracking-tight">
+          <h2 className="text-2xl sm:text-4xl font-bold text-black tracking-tight">
             Hermes Autonomous Mission Cockpit
           </h2>
-          <p className="text-xs text-neutral-600 mt-0.5">
+          <p className="text-sm sm:text-base text-neutral-600 mt-1.5 leading-relaxed max-w-2xl">
             Autonomous AI agents executing real on-chain workflows under cryptographically signed session constraints (EIP-712 / ERC-7579).
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-3 shrink-0">
           <button
             onClick={handleGrantSessionKey}
             disabled={isSigningSession}
-            className="px-4 py-2 bg-white text-black border border-black text-xs font-bold hover:bg-neutral-100 transition cursor-pointer"
+            className="px-6 py-3.5 bg-white text-black border-2 border-black text-sm font-bold hover:bg-neutral-100 transition cursor-pointer shadow-sm"
           >
             {isSigningSession ? "Signing EIP-712 in Wallet..." : "✍️ Grant Session Key (EIP-712)"}
           </button>
           <button
             onClick={handleRunAutonomousPipeline}
             disabled={isRunning}
-            className="px-4 py-2 bg-black text-white border border-black text-xs font-bold hover:bg-neutral-800 transition cursor-pointer flex items-center gap-1.5"
+            className="px-6 py-3.5 bg-black text-white border-2 border-black text-sm font-bold hover:bg-neutral-800 transition cursor-pointer flex items-center gap-2 shadow-sm"
           >
             {isRunning ? (
               <>
-                <span className="w-2 h-2 rounded-full bg-white animate-ping" />
+                <span className="w-2.5 h-2.5 rounded-full bg-white animate-ping" />
                 <span>Hermes Executing...</span>
               </>
             ) : (
@@ -320,74 +320,73 @@ export function AgenticSafetyCockpit({ onWorkflowComplete }: AgenticSafetyCockpi
       </div>
 
       {/* Grid: 3 Safety Parameters */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Card 1: Session Status & ERC-7579 Validator */}
-        <div className="p-3.5 border border-neutral-300 bg-neutral-50 space-y-1.5">
+        <div className="p-6 border border-neutral-300 bg-neutral-50 space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-neutral-600">ERC-7579 Module</span>
-            <span className="px-2 py-0.5 bg-black text-white text-[10px] font-bold">
+            <span className="text-xs sm:text-sm font-semibold text-neutral-600 uppercase tracking-wider">ERC-7579 Module</span>
+            <span className="px-2.5 py-1 bg-black text-white text-xs font-bold">
               {session?.signatureType === "EIP712" ? "EIP-712 TYPED" : (session?.status || "ACTIVE")}
             </span>
           </div>
-          <div className="text-black font-bold text-sm">
-            {session ? `${session.sessionId.slice(0, 16)}...` : "session_prism8_genesis"}
+          <div className="text-black font-bold text-base sm:text-lg truncate">
+            {session ? `${session.sessionId.slice(0, 18)}...` : "session_prism8_genesis"}
           </div>
-          <div className="text-[11px] text-neutral-600 truncate">
-            Validator: <span className="text-black font-semibold">SessionKeyValidator.sol</span>
+          <div className="text-xs sm:text-sm text-neutral-700 truncate">
+            Validator: <span className="text-black font-bold">SessionKeyValidator.sol</span>
           </div>
-          <div className="text-[10px] text-neutral-500 truncate">
-            Grantor: {session?.grantor || (evm.accountId ? `${evm.accountId.slice(0, 10)}...` : "0x7099...79C8")}
+          <div className="text-xs text-neutral-500 truncate">
+            Grantor: <span className="font-mono text-black font-medium">{session?.grantor || (evm.accountId ? `${evm.accountId.slice(0, 10)}...` : "0x7099...79C8")}</span>
           </div>
         </div>
 
         {/* Card 2: Spend Allowance */}
-        <div className="p-3.5 border border-neutral-300 bg-neutral-50 space-y-1.5">
+        <div className="p-6 border border-neutral-300 bg-neutral-50 space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-neutral-600">Remaining Budget</span>
-            <span className="font-bold text-black">
+            <span className="text-xs sm:text-sm font-semibold text-neutral-600 uppercase tracking-wider">Remaining Budget</span>
+            <span className="font-bold text-sm sm:text-base text-black">
               {remainingHbar.toFixed(2)} / {session?.constraints.maxSpendHbar || 5.0} HBAR
             </span>
           </div>
-          <div className="w-full bg-neutral-200 h-1.5 overflow-hidden">
+          <div className="w-full bg-neutral-200 h-2.5 overflow-hidden rounded-full">
             <div
               className="bg-black h-full transition-all duration-500"
               style={{ width: `${Math.min(100, Math.max(0, budgetPercent))}%` }}
             />
           </div>
-          <div className="text-[11px] text-neutral-500">
+          <div className="text-xs sm:text-sm text-neutral-600 leading-relaxed">
             Auto-settles 0.5 HBAR x402 micropayments per oracle call.
           </div>
         </div>
 
         {/* Card 3: Cryptographic Guardrails */}
-        <div className="p-3.5 border border-neutral-300 bg-neutral-50 space-y-1.5">
+        <div className="p-6 border border-neutral-300 bg-neutral-50 space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-neutral-600">Safety Guardrail</span>
-            <span className="text-[10px] text-neutral-700 border border-neutral-300 px-1.5 py-0.5 bg-white">
+            <span className="text-xs sm:text-sm font-semibold text-neutral-600 uppercase tracking-wider">Safety Guardrail</span>
+            <span className="text-xs text-black font-bold border border-neutral-400 px-2 py-0.5 bg-white">
               STRICT CEILING
             </span>
           </div>
-          <div className="text-black font-bold">
+          <div className="text-black font-bold text-base sm:text-lg">
             Max CFA: ${session?.constraints.maxFlowRateMonthlyUsd || 5000}/mo
           </div>
-          <div className="text-[11px] text-neutral-500">
+          <div className="text-xs sm:text-sm text-neutral-600 leading-relaxed">
             Unauthorized drains or out-of-bounds calls cryptographically rejected.
           </div>
         </div>
       </div>
 
       {/* Safety Demonstration Button */}
-      {/* Safety Demonstration Button */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 border border-neutral-200 bg-neutral-50 text-xs">
-        <div className="space-y-0.5">
-          <div className="font-bold text-black">Audit / Safety Benchmark</div>
-          <div className="text-[11px] text-neutral-600">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 sm:p-6 border border-neutral-300 bg-neutral-50 text-sm">
+        <div className="space-y-1">
+          <div className="font-bold text-base text-black">Audit / Safety Benchmark</div>
+          <div className="text-xs sm:text-sm text-neutral-600">
             Verify that the AI agent cannot exceed its delegated budget or trigger rogue contracts.
           </div>
         </div>
         <button
           onClick={handleSimulateRogueAction}
-          className="px-3.5 py-2 border border-black bg-white text-black hover:bg-neutral-100 transition text-xs font-semibold cursor-pointer shrink-0"
+          className="px-6 py-3 border-2 border-black bg-white text-black hover:bg-neutral-100 transition text-xs sm:text-sm font-bold cursor-pointer shrink-0 shadow-sm"
         >
           🛡️ Test Guardrail (Simulate Rogue Action)
         </button>
@@ -395,35 +394,35 @@ export function AgenticSafetyCockpit({ onWorkflowComplete }: AgenticSafetyCockpi
 
       {/* Guardrail Rejection Alert (Proves Safety to Judges) */}
       {guardrailAlert && (
-        <div className="p-4 border-2 border-black bg-neutral-50 text-xs space-y-2.5">
+        <div className="p-6 border-2 border-black bg-neutral-50 text-sm space-y-3">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 font-bold text-black text-sm">
+            <div className="flex items-center gap-2 font-bold text-black text-base sm:text-lg">
               <span>🛡️</span>
               <span>SECURITY BENCHMARK PASSED: ROGUE AI INTERCEPTED</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="px-2 py-0.5 bg-black text-white text-[10px] font-bold">
+              <span className="px-2.5 py-1 bg-black text-white text-xs font-bold">
                 403 FORBIDDEN (HALTED)
               </span>
               <button
                 onClick={() => setGuardrailAlert(null)}
-                className="text-neutral-500 hover:text-black text-xs font-bold px-1"
+                className="text-neutral-500 hover:text-black text-sm font-bold px-1.5"
                 title="Dismiss benchmark alert"
               >
                 ✕
               </button>
             </div>
           </div>
-          <p className="text-neutral-800 text-[11px] leading-relaxed">
-            Hermes attempted to execute an unauthorized treasury transfer (<code className="bg-neutral-200 px-1 py-0.5 text-black font-mono font-bold">{guardrailAlert.guardrailDetails?.attemptedAction}</code>), but was <strong>cryptographically rejected</strong> by the ERC-7579 Session Key Validator. Your wallet and funds remain 100% secure.
+          <p className="text-neutral-800 text-xs sm:text-sm leading-relaxed">
+            Hermes attempted to execute an unauthorized treasury transfer (<code className="bg-neutral-200 px-1.5 py-0.5 text-black font-mono font-bold">{guardrailAlert.guardrailDetails?.attemptedAction}</code>), but was <strong>cryptographically rejected</strong> by the ERC-7579 Session Key Validator. Your wallet and funds remain 100% secure.
           </p>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 text-[10px] text-neutral-600 border-t border-neutral-200">
-            <div>Policy Status: <strong className="text-black block">ENFORCED (REJECTED)</strong></div>
-            <div>Attempted Action: <strong className="text-black block truncate">{guardrailAlert.guardrailDetails?.attemptedAction}</strong></div>
-            <div>Intercepted Spend: <strong className="text-black block">{guardrailAlert.guardrailDetails?.attemptedSpend}</strong></div>
-            <div>Protected Balance: <strong className="text-black block">{guardrailAlert.guardrailDetails?.remainingSessionBudget}</strong></div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 text-xs text-neutral-700 border-t border-neutral-200">
+            <div>Policy Status: <strong className="text-black block text-sm">ENFORCED (REJECTED)</strong></div>
+            <div>Attempted Action: <strong className="text-black block text-sm truncate">{guardrailAlert.guardrailDetails?.attemptedAction}</strong></div>
+            <div>Intercepted Spend: <strong className="text-black block text-sm">{guardrailAlert.guardrailDetails?.attemptedSpend}</strong></div>
+            <div>Protected Balance: <strong className="text-black block text-sm">{guardrailAlert.guardrailDetails?.remainingSessionBudget}</strong></div>
           </div>
-          <div className="text-[10px] text-neutral-500 italic pt-0.5">
+          <div className="text-xs text-neutral-500 italic pt-1">
             ✓ Hackathon Security Proof: Hermes cannot drain assets or call undelegated contracts beyond the user's signed EIP-712 envelope.
           </div>
         </div>

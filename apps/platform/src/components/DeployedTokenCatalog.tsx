@@ -41,22 +41,22 @@ export default function DeployedTokenCatalog({ tokens }: { tokens: TokenRecord[]
             The autonomous agentic real-world asset protocol. Smart wallets delegate time-bound, budget-capped session keys (ERC-7579 / EIP-712) to autonomous AI agents that verify physical properties via x402 oracles, index cap tables with The Graph, and stream per-second rental cashflow via Superfluid CFA.
           </p>
 
-          <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+          <div className="flex flex-wrap items-center justify-center gap-4 pt-4">
             <a
               href="#safety-cockpit"
-              className="bg-black text-white px-6 py-3 border border-black hover:bg-neutral-800 transition-colors font-bold text-xs cursor-pointer flex items-center gap-1.5"
+              className="bg-black text-white px-8 py-4 border-2 border-black hover:bg-neutral-800 transition-all font-bold text-sm cursor-pointer flex items-center gap-2 shadow-sm"
             >
               <span>⚡ Hermes Mission Cockpit</span>
             </a>
             <button
               onClick={() => setIsTokenizeOpen(true)}
-              className="bg-white text-black px-6 py-3 border border-black hover:bg-neutral-100 transition-colors font-semibold text-xs cursor-pointer"
+              className="bg-white text-black px-8 py-4 border-2 border-black hover:bg-neutral-100 transition-all font-bold text-sm cursor-pointer"
             >
               🏛️ Tokenize Asset (x402)
             </button>
             <button
               onClick={() => setIsGraphOpen(true)}
-              className="bg-white text-black px-6 py-3 border border-neutral-300 hover:bg-neutral-100 transition-colors font-semibold text-xs cursor-pointer"
+              className="bg-white text-black px-8 py-4 border-2 border-neutral-300 hover:border-black hover:bg-neutral-100 transition-all font-bold text-sm cursor-pointer"
             >
               📊 Inspect The Graph Subgraph
             </button>
@@ -64,7 +64,7 @@ export default function DeployedTokenCatalog({ tokens }: { tokens: TokenRecord[]
         </div>
 
         {/* 2. Hero Centerpiece: Hermes Agentic Safety Cockpit (ERC-7579 / EIP-712) */}
-        <div id="safety-cockpit" className="scroll-mt-24 max-w-5xl mx-auto w-full">
+        <div id="safety-cockpit" className="scroll-mt-24 w-full max-w-6xl mx-auto">
           <AgenticSafetyCockpit />
         </div>
 
