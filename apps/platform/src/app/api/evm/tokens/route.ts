@@ -89,6 +89,26 @@ export async function POST(req: Request) {
       hashscanUrl: explorerUrl,
     });
 
+    // Ensure initial treasury and investor holders exist
+    try {
+      const { ensureHolder, updateHolder } = await import("@/lib/db/repo");
+      ensureHolder(token.id, treasuryAccountId, treasuryAccountId);
+      updateHolder(token.id, treasuryAccountId, {
+        associated: true,
+        kycGranted: true,
+        status: "WHITELISTED",
+      });
+      const demoInvestor = "0x28a8746e75304c0780e011bed21c72cd78cd535e";
+      ensureHolder(token.id, demoInvestor, demoInvestor);
+      updateHolder(token.id, demoInvestor, {
+        associated: true,
+        kycGranted: true,
+        status: "WHITELISTED",
+      });
+    } catch (holderErr) {
+      console.warn("Could not insert initial holders:", holderErr);
+    }
+
     return NextResponse.json({ token }, { status: 201 });
   });
 }

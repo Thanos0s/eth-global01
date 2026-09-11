@@ -24,6 +24,27 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    // Persist event to sqlite audit trail
+    try {
+      const { insertEvent } = await import("@/lib/db/repo");
+      const targetTokenId = propertyId.startsWith("0.") || propertyId.startsWith("0x") ? propertyId : "0.0.4491823";
+      insertEvent({
+        tokenId: targetTokenId,
+        type: "TRANSFER",
+        detail: {
+          action: "TENANT_RENT_DEPOSITED",
+          amount: `$${amount.toLocaleString()} USD`,
+          tenant: tenantName,
+          flowRatePerSec,
+          hcsSequenceNumber: hcsReceipt.sequenceNumber,
+        },
+        txId,
+        hashscanUrl: hcsReceipt.hashscanUrl || `https://hashscan.io/testnet/topic/0.0.4491823`,
+      });
+    } catch (e) {
+      console.warn("[simulate rent] Could not record event in sqlite:", e);
+    }
+
     return NextResponse.json({
       success: true,
       propertyId,
