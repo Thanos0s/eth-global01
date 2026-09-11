@@ -3135,6 +3135,14 @@ routes = [
     Route("/api/yield/{path:path}",             route_tokenization,  methods=ANY_METHOD),
     Route("/api/rent",                          route_tokenization,  methods=ANY_METHOD),
     Route("/api/rent/{path:path}",              route_tokenization,  methods=ANY_METHOD),
+    Route("/api/agent",                         route_tokenization,  methods=ANY_METHOD),
+    Route("/api/agent/{path:path}",             route_tokenization,  methods=ANY_METHOD),
+    Route("/api/subgraph",                      route_tokenization,  methods=ANY_METHOD),
+    Route("/api/subgraph/{path:path}",          route_tokenization,  methods=ANY_METHOD),
+    Route("/api/token-requests",                route_tokenization,  methods=ANY_METHOD),
+    Route("/api/token-requests/{path:path}",    route_tokenization,  methods=ANY_METHOD),
+    Route("/api/liveness",                      route_tokenization,  methods=ANY_METHOD),
+    Route("/api/liveness/{path:path}",          route_tokenization,  methods=ANY_METHOD),
     Route("/.well-known/{path:path}",           route_tokenization,  methods=ANY_METHOD),
     Route("/api/runtime-config",                route_tokenization,  methods=ANY_METHOD),
     Route("/_next/{path:path}",                 route_tokenization,  methods=ANY_METHOD),
@@ -3144,6 +3152,8 @@ routes = [
     Route("/next.svg",                          route_tokenization,  methods=ANY_METHOD),
     Route("/vercel.svg",                        route_tokenization,  methods=ANY_METHOD),
     Route("/window.svg",                        route_tokenization,  methods=ANY_METHOD),
+    Route("/demo-simulation.html",               route_tokenization,  methods=ANY_METHOD),
+    Route("/brand/{path:path}",                 route_tokenization,  methods=ANY_METHOD),
 
     # Reverse-proxy hermes's dashboard WebSockets (Chat tab + sidecar).
     # WebSocketRoute is matched independently of HTTP routes, so order

@@ -13,6 +13,22 @@ export interface AgenticSafetyCockpitProps {
 const VALIDATOR_MODULE_ADDRESS = "0x7579C0de00000000000000000000000000007579";
 const HERMES_AGENT_ADDRESS = "0x89205A3A3b2A69De6Dbf7f01ED13B2108B2c43e7";
 
+async function parseSafeJson<T = any>(res: Response): Promise<T> {
+  const contentType = res.headers.get("content-type") || "";
+  if (contentType.includes("application/json")) {
+    return await res.json();
+  }
+  const text = await res.text();
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    if (!res.ok) {
+      throw new Error(`Server returned HTTP ${res.status} (${res.statusText || "Service Unavailable"})`);
+    }
+    throw new Error("Invalid response format from server.");
+  }
+}
+
 export function AgenticSafetyCockpit({ onWorkflowComplete }: AgenticSafetyCockpitProps) {
   const evm = useEvmWallet();
 
@@ -35,7 +51,7 @@ export function AgenticSafetyCockpit({ onWorkflowComplete }: AgenticSafetyCockpi
         ? `/api/agent/session?grantor=${encodeURIComponent(evm.accountId)}`
         : "/api/agent/session";
       const res = await fetch(url);
-      const data = await res.json();
+      const data = await parseSafeJson(res);
       if (data.session) {
         setSession(data.session);
       }
@@ -169,7 +185,7 @@ export function AgenticSafetyCockpit({ onWorkflowComplete }: AgenticSafetyCockpi
         }),
       });
 
-      const data = await res.json();
+      const data = await parseSafeJson(res);
       if (!res.ok) throw new Error(data.error || "Failed to register session key");
 
       setSession(data.session);
@@ -210,7 +226,7 @@ export function AgenticSafetyCockpit({ onWorkflowComplete }: AgenticSafetyCockpi
         }),
       });
 
-      const data = await res.json();
+      const data = await parseSafeJson(res);
       if (!res.ok) throw new Error(data.error || "Autonomous execution failed");
 
       setExecutionResult(data);
@@ -243,7 +259,7 @@ export function AgenticSafetyCockpit({ onWorkflowComplete }: AgenticSafetyCockpi
         }),
       });
 
-      const data = await res.json();
+      const data = await parseSafeJson(res);
       if (res.status === 403) {
         setGuardrailAlert(data);
       } else {

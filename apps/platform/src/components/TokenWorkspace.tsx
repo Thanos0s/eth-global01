@@ -62,7 +62,14 @@ export default function TokenWorkspace({
           },
         }),
       });
-      const data = await res.json();
+      const contentType = res.headers.get("content-type") || "";
+      let data: any = {};
+      if (contentType.includes("application/json")) {
+        data = await res.json();
+      } else {
+        const text = await res.text();
+        try { data = JSON.parse(text); } catch { data = {}; }
+      }
       if (data.success) {
         setPipelineSuccess(true);
         setPipelineResult(data);
