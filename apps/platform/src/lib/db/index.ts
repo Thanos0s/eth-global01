@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { SCHEMA_SQL } from "./schema";
 import { serializeWorldIdProof } from "../worldid/proof";
+import { seedDatabase } from "./seed";
 
 // better-sqlite3 is synchronous and file-backed, which is perfect for a single-process
 // Next.js server holding one Hedera operator/treasury account. Not meant to scale past a
@@ -50,6 +51,7 @@ function openDb(): Database.Database {
   migrateHolderWorldIdProofs(db);
   migrateHolderLivenessState(db);
   migrateWorldIdVerificationQueue(db);
+  seedDatabase(db);
 
   return db;
 }

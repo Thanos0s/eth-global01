@@ -1,10 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useEvmWallet } from "@/hooks/useEvmWallet";
 import { useWallet } from "@/hooks/useWalletConnect";
 import { TheGraphInspectorModal } from "@/components/TheGraphInspectorModal";
+import HolderTable from "@/components/HolderTable";
+import HolderPanel from "@/components/HolderPanel";
+import EventLog from "@/components/EventLog";
 import type {
   EventRecord,
   HolderRecord,
@@ -17,6 +20,8 @@ export default function TokenWorkspace({
   token,
   holders,
   events,
+  requests,
+  worldConfig,
 }: {
   token: TokenRecord;
   holders: HolderRecord[];
@@ -26,22 +31,116 @@ export default function TokenWorkspace({
 }) {
   const evm = useEvmWallet();
   const hedera = useWallet();
-  const activeAccountId = evm.accountId || hedera.accountId || "0x3A97Ea4B0C1d87e0294DbE81b4Fe8A63175c040E";
+  const activeAccountId = evm.accountId || hedera.accountId || "0x28a8746e75304c0780e011bed21c72cd78cd535e";
 
+  const [activeTab, setActiveTab] = useState<"overview" | "captable" | "worldid" | "ledger">("overview");
   const [isGraphModalOpen, setIsGraphModalOpen] = useState(false);
   const [isRunningPipeline, setIsRunningPipeline] = useState(false);
   const [pipelineSuccess, setPipelineSuccess] = useState(false);
   const [pipelineResult, setPipelineResult] = useState<any | null>(null);
-  const [streamedYield, setStreamedYield] = useState<number>(380.00);
 
-  // Per-second ticking yield animation
+  // Parse property address from memo or fallback to name
+  const propertyAddress =
+    token.memo?.split("·")[0]?.replace("USPS DPV Validated", "").trim() ||
+    token.memo?.split("|")[0]?.trim() ||
+    token.name;
+
+  // Derive initial monthly rent from memo or initial supply
+  const rentMatch = token.memo?.match(/\$([0-9,]+)/);
+  const initialRent = rentMatch
+    ? Number(rentMatch[1].replace(/,/g, ""))
+    : Number(token.initialSupply) >= 5000
+    ? 8200
+    : 3800;
+
+  const [monthlyRent, setMonthlyRent] = useState<number>(initialRent);
+  const [depositAmount, setDepositAmount] = useState<number>(monthlyRent);
+  const [isDepositing, setIsDepositing] = useState(false);
+  const [depositSuccess, setDepositSuccess] = useState(false);
+
+  // Per-second stream rate for 10% investor share: (monthlyRent * 0.1) / (30 * 86400)
+  const sharePct = 10.0;
+  const investorMonthlyRent = (monthlyRent * sharePct) / 100;
+  const flowRatePerSec = investorMonthlyRent / 2592000;
+
+  const [accruedYield, setAccruedYield] = useState<number>(14.8251);
+  const [isStreaming, setIsStreaming] = useState<boolean>(true);
+  const [isClaiming, setIsClaiming] = useState<boolean>(false);
+  const [claimReceipt, setClaimReceipt] = useState<{ txId: string; hashscanUrl: string; amount: number } | null>(null);
+
+  const startRef = useRef<number>(Date.now());
+  const initialRef = useRef<number>(14.8251);
+
+  // Real-time ticking balance (80ms interval)
   useEffect(() => {
+    if (!isStreaming) return;
     const timer = setInterval(() => {
-      setStreamedYield((prev) => prev + 0.00014660);
-    }, 1000);
+      const elapsed = (Date.now() - startRef.current) / 1000;
+      setAccruedYield(initialRef.current + elapsed * flowRatePerSec);
+    }, 80);
     return () => clearInterval(timer);
-  }, []);
+  }, [isStreaming, flowRatePerSec]);
 
+  // Claim yield via real API endpoint
+  const handleClaimYield = async () => {
+    setIsClaiming(true);
+    try {
+      const res = await fetch("/api/yield/claim", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          propertyId: token.id,
+          accountId: activeAccountId,
+          amount: accruedYield,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setClaimReceipt({
+          txId: data.txId,
+          hashscanUrl: data.hashscanUrl,
+          amount: data.amountClaimed,
+        });
+        initialRef.current = 0;
+        startRef.current = Date.now();
+        setAccruedYield(0);
+        setTimeout(() => setClaimReceipt(null), 8000);
+      }
+    } catch (err) {
+      console.error("Claim error:", err);
+    } finally {
+      setIsClaiming(false);
+    }
+  };
+
+  // Inject tenant rent
+  const handleInjectRent = async () => {
+    setIsDepositing(true);
+    setDepositSuccess(false);
+    try {
+      const res = await fetch("/api/rent/simulate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          propertyId: token.id,
+          amount: depositAmount,
+          tenantName: "Acme Residential Tenant Corp",
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setMonthlyRent(depositAmount);
+        setDepositSuccess(true);
+        setTimeout(() => setDepositSuccess(false), 5000);
+      }
+    } catch (err) {
+      console.error("Rent injection error:", err);
+    } finally {
+      setIsDepositing(false);
+    }
+  };
+
+  // Run autonomous agent pipeline
   const handleTriggerPipeline = async () => {
     setIsRunningPipeline(true);
     setPipelineSuccess(false);
@@ -53,12 +152,12 @@ export default function TokenWorkspace({
           sessionId: "session_prism8_genesis_demo",
           action: "FULL_TOKENIZATION_AND_YIELD_PIPELINE",
           property: {
-            street: "456 Oak Avenue",
+            street: propertyAddress,
             city: "Miami",
             state: "FL",
             zip: "33101",
-            monthlyRent: 3800,
-            shares: 1000,
+            monthlyRent,
+            shares: Number(token.initialSupply) || 1000,
           },
         }),
       });
@@ -101,7 +200,7 @@ export default function TokenWorkspace({
           </div>
         </div>
 
-        {/* 1. Instrument Header Card */}
+        {/* 1. Dynamic Instrument Header Card */}
         <div className="border border-neutral-300 bg-neutral-50 p-6 sm:p-8 space-y-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="space-y-1.5">
@@ -131,31 +230,54 @@ export default function TokenWorkspace({
                   <span>↗</span>
                 </a>
               </div>
+              <div className="text-xs text-neutral-500 pt-1">
+                📍 {propertyAddress} · Total Shares: {Number(token.initialSupply).toLocaleString()}
+              </div>
             </div>
 
-            {/* Live Investor Balance & Streaming Yield */}
-            <div className="border border-neutral-300 bg-white p-4 text-xs space-y-1.5 min-w-[260px]">
+            {/* Live Investor Balance & Streaming Yield Counter */}
+            <div className="border border-neutral-300 bg-white p-4 text-xs space-y-2 min-w-[280px]">
               <div className="flex items-center justify-between text-neutral-500">
-                <span>INVESTOR POSITION</span>
-                <span className="w-2 h-2 rounded-full bg-black animate-ping" />
+                <span>INVESTOR POSITION (10%)</span>
+                <span className="w-2 h-2 rounded-full bg-black animate-pulse" />
               </div>
               <div className="text-xl font-bold text-black flex items-baseline gap-1.5">
-                <span>100.00</span>
-                <span className="text-xs text-neutral-600 font-normal">{token.symbol} (10% Share)</span>
+                <span>{(Number(token.initialSupply) * 0.1).toFixed(0)}</span>
+                <span className="text-xs text-neutral-600 font-normal">{token.symbol} Shares</span>
               </div>
               <div className="text-[11px] text-neutral-600 flex items-center justify-between pt-1 border-t border-neutral-200">
                 <span>Superfluid CFA Yield:</span>
                 <span className="font-bold text-black font-mono">
-                  ${streamedYield.toFixed(6)}
+                  ${accruedYield.toFixed(6)}
                 </span>
               </div>
-              <div className="text-[10px] text-neutral-500 truncate">
-                Wallet: {activeAccountId.slice(0, 8)}...{activeAccountId.slice(-4)}
+              <div className="pt-2">
+                <button
+                  onClick={handleClaimYield}
+                  disabled={isClaiming || accruedYield <= 0.001}
+                  className="w-full bg-black text-white py-2 text-xs font-bold border border-black hover:bg-neutral-800 disabled:opacity-40 transition cursor-pointer"
+                >
+                  {isClaiming ? "Settling Claim..." : `Claim Yield ($${accruedYield.toFixed(2)})`}
+                </button>
               </div>
+
+              {claimReceipt && (
+                <div className="text-[10px] bg-neutral-100 border border-neutral-300 p-1.5 text-center text-black space-y-0.5">
+                  <div className="font-bold">✓ Claimed ${claimReceipt.amount.toFixed(4)}!</div>
+                  <a
+                    href={claimReceipt.hashscanUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="underline text-[9px] text-neutral-600 block truncate"
+                  >
+                    Tx: {claimReceipt.txId} ↗
+                  </a>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Compliance & Verification Badges */}
+          {/* Compliance & Rail Badges */}
           <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-neutral-200 text-xs">
             <span className="px-2 py-0.5 bg-white border border-neutral-300 text-[11px]">
               ✓ USPS DPV Verified Property
@@ -172,10 +294,20 @@ export default function TokenWorkspace({
             <span className="px-2 py-0.5 bg-white border border-neutral-300 text-[11px]">
               ✓ ERC-7579 Scoped Session Safe
             </span>
+            {token.compliance.worldIdRequired && (
+              <span className="px-2 py-0.5 bg-white border border-neutral-300 text-[11px]">
+                ✓ World ID Biometric KYC
+              </span>
+            )}
+            {token.compliance.livenessEnabled && (
+              <span className="px-2 py-0.5 bg-white border border-neutral-300 text-[11px]">
+                ✓ Liveness Check-in Active
+              </span>
+            )}
           </div>
         </div>
 
-        {/* 2. Interactive Property Operations & Metrics */}
+        {/* 2. Top Operational Metrics Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Card 1: Rental Yield & Cashflow */}
           <div className="border border-neutral-300 bg-white p-5 space-y-3">
@@ -183,13 +315,13 @@ export default function TokenWorkspace({
               Rental Cashflow
             </div>
             <div className="text-2xl font-bold text-black">
-              $3,800.00 <span className="text-xs font-normal text-neutral-600">/ month</span>
+              ${monthlyRent.toLocaleString()}.00 <span className="text-xs font-normal text-neutral-600">/ month</span>
             </div>
             <p className="text-xs text-neutral-600 leading-relaxed">
-              Gross residential rent collected and distributed per second into token holder smart wallets via Superfluid Constant Flow Agreement (CFA).
+              Gross residential rent collected and distributed continuously into shareholder smart wallets via Superfluid CFA.
             </p>
             <div className="text-[11px] text-black font-semibold pt-2 border-t border-neutral-200">
-              Stream Rate: +$0.00014660 / sec
+              Flow Rate: +${flowRatePerSec.toFixed(8)} / sec
             </div>
           </div>
 
@@ -202,7 +334,7 @@ export default function TokenWorkspace({
               Topic 0.0.4491823
             </div>
             <p className="text-xs text-neutral-600 leading-relaxed">
-              Every x402 oracle verification and yield settlement writes an immutable, timestamped audit record directly to the Hedera Consensus Service.
+              Every x402 oracle check and yield distribution writes an immutable consensus audit record directly to Hedera Consensus Service.
             </p>
             <div className="pt-2 border-t border-neutral-200">
               <a
@@ -211,7 +343,7 @@ export default function TokenWorkspace({
                 rel="noreferrer"
                 className="text-xs font-bold text-black underline hover:text-neutral-600 flex items-center gap-1"
               >
-                <span>View HCS Audit Log on HashScan</span>
+                <span>View HCS Topic on HashScan</span>
                 <span>↗</span>
               </a>
             </div>
@@ -223,10 +355,10 @@ export default function TokenWorkspace({
               The Graph Protocol
             </div>
             <div className="text-2xl font-bold text-black">
-              4 Live Holders
+              {holders.length > 0 ? `${holders.length} Active Holders` : "4 Active Holders"}
             </div>
             <p className="text-xs text-neutral-600 leading-relaxed">
-              Hermes queries live Sepolia Subgraph indexers to calculate exact shareholder ownership and dynamically scale Superfluid CFA stream flows.
+              Hermes queries live Sepolia Subgraph indexers to discover shareholder cap tables and dynamically scale Superfluid CFA stream flows.
             </p>
             <div className="pt-2 border-t border-neutral-200">
               <button
@@ -241,205 +373,199 @@ export default function TokenWorkspace({
           </div>
         </div>
 
-        {/* 3. Interactive Agent Action Bar */}
-        <div className="border border-neutral-300 bg-neutral-50 p-6 space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <h2 className="text-base font-bold text-black">
-                Autonomous Economic Execution
-              </h2>
-              <p className="text-xs text-neutral-600">
-                Trigger Hermes to verify property status via x402 and settle continuous Superfluid yield streaming under delegated session constraints.
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={handleTriggerPipeline}
-                disabled={isRunningPipeline}
-                className="bg-black text-white px-5 py-2.5 border border-black hover:bg-neutral-800 transition font-bold text-xs cursor-pointer flex items-center gap-2 disabled:opacity-50"
-              >
-                {isRunningPipeline ? (
-                  <>
-                    <span className="w-2.5 h-2.5 rounded-full bg-white animate-spin" />
-                    <span>Executing Pipeline...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>⚡</span>
-                    <span>Trigger Cashflow Distribution</span>
-                  </>
-                )}
-              </button>
-              <Link
-                href="/#safety-cockpit"
-                className="px-4 py-2.5 bg-white border border-neutral-300 text-black hover:bg-neutral-100 transition font-semibold text-xs cursor-pointer"
-              >
-                🛡️ Open Safety Cockpit
-              </Link>
-            </div>
-          </div>
-
-          {/* Success Banner if triggered */}
-          {pipelineSuccess && pipelineResult && (
-            <div className="p-4 border border-black bg-white text-xs space-y-2">
-              <div className="flex items-center justify-between text-black font-bold">
-                <span className="flex items-center gap-1.5">
-                  <span>✓</span>
-                  <span>Autonomous Cashflow Distribution Successfully Executed</span>
-                </span>
-                <span className="text-[10px] text-neutral-500">
-                  Execution ID: {pipelineResult.executionId}
-                </span>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-neutral-700 pt-2 border-t border-neutral-200">
-                <div>
-                  Settlement: <strong>0.5 HBAR x402 Micropayment</strong> (Delegated Session Cap)
-                </div>
-                <div>
-                  Yield Stream: <strong>+$0.00014660 / sec</strong> active on Base Sepolia
-                </div>
-              </div>
-            </div>
-          )}
+        {/* 3. Navigation Tabs */}
+        <div className="flex border-b border-neutral-300 gap-2 text-xs sm:text-sm font-semibold">
+          <button
+            onClick={() => setActiveTab("overview")}
+            className={`px-5 py-3 border-b-2 transition cursor-pointer ${
+              activeTab === "overview"
+                ? "border-black text-black bg-neutral-100 font-bold"
+                : "border-transparent text-neutral-500 hover:text-black"
+            }`}
+          >
+            ⚡ Cashflow &amp; Agent Actions
+          </button>
+          <button
+            onClick={() => setActiveTab("captable")}
+            className={`px-5 py-3 border-b-2 transition cursor-pointer ${
+              activeTab === "captable"
+                ? "border-black text-black bg-neutral-100 font-bold"
+                : "border-transparent text-neutral-500 hover:text-black"
+            }`}
+          >
+            👥 Cap Table ({holders.length})
+          </button>
+          <button
+            onClick={() => setActiveTab("worldid")}
+            className={`px-5 py-3 border-b-2 transition cursor-pointer ${
+              activeTab === "worldid"
+                ? "border-black text-black bg-neutral-100 font-bold"
+                : "border-transparent text-neutral-500 hover:text-black"
+            }`}
+          >
+            🛡️ World ID Portal
+          </button>
+          <button
+            onClick={() => setActiveTab("ledger")}
+            className={`px-5 py-3 border-b-2 transition cursor-pointer ${
+              activeTab === "ledger"
+                ? "border-black text-black bg-neutral-100 font-bold"
+                : "border-transparent text-neutral-500 hover:text-black"
+            }`}
+          >
+            📜 Consensus Activity ({events.length})
+          </button>
         </div>
 
-        {/* 4. Live On-Chain Activity Feed */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between border-b border-neutral-300 pb-2">
-            <h2 className="text-sm font-bold text-black flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-black" />
-              <span>Live On-Chain Activity & Verification Ledger</span>
-            </h2>
-            <span className="text-xs text-neutral-500 font-mono">
-              Consensus Synchronized
-            </span>
-          </div>
-
-          <div className="space-y-3">
-            {/* Step 1 Event */}
-            <div className="p-4 border border-neutral-300 bg-white space-y-2 text-xs">
-              <div className="flex items-center justify-between">
-                <div className="font-bold text-black flex items-center gap-2">
-                  <span className="w-4 h-4 rounded-full bg-black text-white text-[10px] flex items-center justify-center">1</span>
-                  <span>Autonomous x402 Oracle Micropayment Settlement</span>
+        {/* Tab 1: Cashflow & Agent Actions */}
+        {activeTab === "overview" && (
+          <div className="space-y-6">
+            {/* Rent Inflow Engine for this property */}
+            <div className="border border-neutral-300 bg-white p-6 space-y-4">
+              <div className="flex items-center justify-between border-b border-neutral-200 pb-3">
+                <div>
+                  <h3 className="text-base font-bold text-black">Tenant Rent Deposit Simulator</h3>
+                  <p className="text-xs text-neutral-600 mt-0.5">
+                    Deposit simulated rent to accelerate continuous Superfluid cashflow distribution for this property.
+                  </p>
                 </div>
-                <span className="px-2 py-0.5 bg-neutral-100 border border-neutral-300 text-[10px] font-bold uppercase">
-                  CONFIRMED
+                <span className="text-xs px-2 py-0.5 bg-neutral-100 border border-neutral-300 font-bold text-black">
+                  fUSDCx Reserve
                 </span>
               </div>
-              <p className="text-[11px] text-neutral-600">
-                Settled 0.5 HBAR micropayment via Blocky402 facilitator under delegated Session Key allowance for USPS DPV address validation.
-              </p>
-              <div className="flex items-center justify-between text-[10px] text-neutral-500 pt-1 border-t border-neutral-200">
-                <span>Network: <strong className="text-black">Hedera Testnet</strong></span>
-                <a
-                  href="https://hashscan.io/testnet/transaction/0.0.5180265-1789066233-697953817"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="font-bold text-black underline hover:text-neutral-600 flex items-center gap-1"
+
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="relative flex-1 min-w-[200px]">
+                  <span className="absolute left-3 top-2 text-neutral-500 text-xs">$</span>
+                  <input
+                    type="number"
+                    value={depositAmount}
+                    onChange={(e) => setDepositAmount(Number(e.target.value))}
+                    className="w-full bg-neutral-50 border border-neutral-300 pl-7 pr-3 py-2 text-xs font-mono text-black focus:border-black focus:outline-none"
+                    placeholder="3800"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  {[2500, 3800, 5200, 10000].map((amt) => (
+                    <button
+                      key={amt}
+                      type="button"
+                      onClick={() => setDepositAmount(amt)}
+                      className={`px-2.5 py-1.5 border text-xs cursor-pointer ${
+                        depositAmount === amt
+                          ? "bg-black text-white border-black"
+                          : "bg-white text-black border-neutral-300 hover:border-black"
+                      }`}
+                    >
+                      ${amt.toLocaleString()}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={handleInjectRent}
+                  disabled={isDepositing || depositAmount <= 0}
+                  className="bg-black text-white px-5 py-2 text-xs font-bold border border-black hover:bg-neutral-800 disabled:opacity-50 transition cursor-pointer"
                 >
-                  <span>0.0.5180265-1789066233...</span>
-                  <span className="bg-neutral-100 px-1 py-0.5 border border-neutral-300">HashScan ↗</span>
-                </a>
+                  {isDepositing ? "Injecting..." : "Inject Rent Deposit"}
+                </button>
               </div>
+
+              {depositSuccess && (
+                <div className="text-xs bg-neutral-100 border border-neutral-300 p-2.5 text-black font-semibold flex items-center justify-between">
+                  <span>✓ ${depositAmount.toLocaleString()} Rent Injected! Flow rate dynamically accelerated.</span>
+                  <span className="text-[10px] text-neutral-600">HCS Sequence Logged</span>
+                </div>
+              )}
             </div>
 
-            {/* Step 2 Event */}
-            <div className="p-4 border border-neutral-300 bg-white space-y-2 text-xs">
-              <div className="flex items-center justify-between">
-                <div className="font-bold text-black flex items-center gap-2">
-                  <span className="w-4 h-4 rounded-full bg-black text-white text-[10px] flex items-center justify-center">2</span>
-                  <span>Hedera Consensus Service (HCS) Audit Anchor</span>
+            {/* Autonomous Pipeline Action */}
+            <div className="border border-neutral-300 bg-neutral-50 p-6 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h3 className="text-base font-bold text-black">
+                    Autonomous Economic Execution
+                  </h3>
+                  <p className="text-xs text-neutral-600">
+                    Trigger Hermes to verify property status via x402 and settle continuous Superfluid yield streaming under delegated session constraints.
+                  </p>
                 </div>
-                <span className="px-2 py-0.5 bg-neutral-100 border border-neutral-300 text-[10px] font-bold uppercase">
-                  IMMUTABLE_LOGGED
-                </span>
-              </div>
-              <p className="text-[11px] text-neutral-600">
-                Cryptographic audit hash anchored to Hedera Consensus Service on Topic 0.0.4491823 (Consensus Sequence #65922).
-              </p>
-              <div className="flex items-center justify-between text-[10px] text-neutral-500 pt-1 border-t border-neutral-200">
-                <span>Network: <strong className="text-black">Hedera Testnet (HCS Topic 0.0.4491823)</strong></span>
-                <a
-                  href="https://hashscan.io/testnet/transaction/0.0.7095826-1789066232-061237484"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="font-bold text-black underline hover:text-neutral-600 flex items-center gap-1"
-                >
-                  <span>0.0.7095826-1789066232...</span>
-                  <span className="bg-neutral-100 px-1 py-0.5 border border-neutral-300">HashScan ↗</span>
-                </a>
-              </div>
-            </div>
-
-            {/* Step 3 Event */}
-            <div className="p-4 border border-neutral-300 bg-white space-y-2 text-xs">
-              <div className="flex items-center justify-between">
-                <div className="font-bold text-black flex items-center gap-2">
-                  <span className="w-4 h-4 rounded-full bg-black text-white text-[10px] flex items-center justify-center">3</span>
-                  <span>The Graph Studio Dynamic Holder Discovery</span>
-                </div>
-                <span className="px-2 py-0.5 bg-neutral-100 border border-neutral-300 text-[10px] font-bold uppercase">
-                  INDEXED
-                </span>
-              </div>
-              <p className="text-[11px] text-neutral-600">
-                Hermes queried Sepolia Subgraph indexer to discover live shareholder cap table proportions and derive exact continuous yield flow rates.
-              </p>
-              <div className="flex items-center justify-between text-[10px] text-neutral-500 pt-1 border-t border-neutral-200">
-                <span>Network: <strong className="text-black">The Graph Protocol (Sepolia Indexer)</strong></span>
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-3">
                   <button
-                    type="button"
-                    onClick={() => setIsGraphModalOpen(true)}
-                    className="font-bold text-black underline hover:text-neutral-600 flex items-center gap-1 cursor-pointer"
+                    onClick={handleTriggerPipeline}
+                    disabled={isRunningPipeline}
+                    className="bg-black text-white px-5 py-2.5 border border-black hover:bg-neutral-800 transition font-bold text-xs cursor-pointer flex items-center gap-2 disabled:opacity-50"
                   >
-                    <span>QmQ65v4hUvG1K3T...</span>
-                    <span className="bg-black text-white px-1.5 py-0.5 border border-black font-semibold text-[9px]">
-                      🔍 Inspect Subgraph ↗
-                    </span>
+                    {isRunningPipeline ? (
+                      <>
+                        <span className="w-2.5 h-2.5 rounded-full bg-white animate-spin" />
+                        <span>Executing Pipeline...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>⚡</span>
+                        <span>Trigger Cashflow Distribution</span>
+                      </>
+                    )}
                   </button>
-                  <a
-                    href="/api/subgraph"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="bg-neutral-100 px-1.5 py-0.5 border border-neutral-300 text-[9px] font-semibold text-black"
+                  <Link
+                    href="/#safety-cockpit"
+                    className="px-4 py-2.5 bg-white border border-neutral-300 text-black hover:bg-neutral-100 transition font-semibold text-xs cursor-pointer"
                   >
-                    API JSON ↗
-                  </a>
+                    🛡️ Open Safety Cockpit
+                  </Link>
                 </div>
               </div>
-            </div>
 
-            {/* Step 4 Event */}
-            <div className="p-4 border border-neutral-300 bg-white space-y-2 text-xs">
-              <div className="flex items-center justify-between">
-                <div className="font-bold text-black flex items-center gap-2">
-                  <span className="w-4 h-4 rounded-full bg-black text-white text-[10px] flex items-center justify-center">4</span>
-                  <span>Superfluid CFA Per-Second Yield Stream Creation</span>
+              {pipelineSuccess && pipelineResult && (
+                <div className="p-4 border border-black bg-white text-xs space-y-2">
+                  <div className="flex items-center justify-between text-black font-bold">
+                    <span className="flex items-center gap-1.5">
+                      <span>✓</span>
+                      <span>Autonomous Cashflow Distribution Successfully Executed</span>
+                    </span>
+                    <span className="text-[10px] text-neutral-500 font-mono">
+                      Execution ID: {pipelineResult.executionId}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-neutral-700 pt-2 border-t border-neutral-200">
+                    <div>
+                      Settlement: <strong>0.5 HBAR x402 Micropayment</strong> (Delegated Session Cap)
+                    </div>
+                    <div>
+                      Yield Stream: <strong>+${flowRatePerSec.toFixed(8)} / sec</strong> active on Base Sepolia
+                    </div>
+                  </div>
                 </div>
-                <span className="px-2 py-0.5 bg-neutral-100 border border-neutral-300 text-[10px] font-bold uppercase">
-                  STREAMING_ACTIVE
-                </span>
-              </div>
-              <p className="text-[11px] text-neutral-600">
-                Constant Flow Agreement active: +$0.00014660/sec ($380.00/mo) continuous yield streaming directly into investor wallet.
-              </p>
-              <div className="flex items-center justify-between text-[10px] text-neutral-500 pt-1 border-t border-neutral-200">
-                <span>Network: <strong className="text-black">Base Sepolia (CFAv1 Forwarder)</strong></span>
-                <a
-                  href="https://sepolia.basescan.org/address/0xcfA132E353cB4E398080B9700609bb008eceB125#internaltx"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="font-bold text-black underline hover:text-neutral-600 flex items-center gap-1"
-                >
-                  <span>0xcfA132E353cB4E398...</span>
-                  <span className="bg-neutral-100 px-1 py-0.5 border border-neutral-300">BaseScan ↗</span>
-                </a>
-              </div>
+              )}
             </div>
           </div>
-        </div>
+        )}
+
+        {/* Tab 2: Cap Table */}
+        {activeTab === "captable" && (
+          <div className="space-y-6">
+            <HolderTable token={token} holders={holders} />
+          </div>
+        )}
+
+        {/* Tab 3: World ID Portal & Token Requests */}
+        {activeTab === "worldid" && (
+          <div className="space-y-6">
+            <HolderPanel
+              token={token}
+              holders={holders}
+              requests={requests}
+              worldConfig={worldConfig}
+            />
+          </div>
+        )}
+
+        {/* Tab 4: Immutable Consensus Activity Ledger */}
+        {activeTab === "ledger" && (
+          <div className="space-y-6">
+            <EventLog events={events} />
+          </div>
+        )}
 
         {/* Interactive The Graph Inspector Modal */}
         <TheGraphInspectorModal

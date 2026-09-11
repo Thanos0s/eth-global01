@@ -26,6 +26,7 @@ export function InvestorStreamDashboard({
   const [isStreaming, setIsStreaming] = useState<boolean>(true);
   const [isClaiming, setIsClaiming] = useState<boolean>(false);
   const [claimSuccess, setClaimSuccess] = useState<boolean>(false);
+  const [claimTx, setClaimTx] = useState<{ txId: string; hashscanUrl: string; amount: number } | null>(null);
 
   const startRef = useRef<number>(Date.now());
   const initialRef = useRef<number>(initialBalance);
@@ -45,14 +46,35 @@ export function InvestorStreamDashboard({
 
   const handleClaim = async () => {
     setIsClaiming(true);
-    await new Promise((r) => setTimeout(r, 1000));
-    setIsClaiming(false);
-    setClaimSuccess(true);
-    initialRef.current = 0;
-    startRef.current = Date.now();
-    setCurrentYield(0);
-    if (onClaim) onClaim();
-    setTimeout(() => setClaimSuccess(false), 4000);
+    try {
+      const res = await fetch("/api/yield/claim", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          propertyId: "0.0.4491823",
+          accountId: "0x28a8746e75304c0780e011bed21c72cd78cd535e",
+          amount: currentYield,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setClaimTx({
+          txId: data.txId,
+          hashscanUrl: data.hashscanUrl,
+          amount: data.amountClaimed,
+        });
+        setClaimSuccess(true);
+        initialRef.current = 0;
+        startRef.current = Date.now();
+        setCurrentYield(0);
+        if (onClaim) onClaim();
+        setTimeout(() => setClaimSuccess(false), 7000);
+      }
+    } catch (e) {
+      console.error("Claim error:", e);
+    } finally {
+      setIsClaiming(false);
+    }
   };
 
   return (
@@ -113,8 +135,23 @@ export function InvestorStreamDashboard({
       </div>
 
       {claimSuccess && (
-        <div className="text-[10px] bg-neutral-100 border border-neutral-300 p-1.5 text-center text-black font-semibold">
-          ✓ Yield Claimed! Settled via Hedera Scheduled Tx
+        <div className="text-[10px] bg-neutral-100 border border-neutral-300 p-2 text-center text-black space-y-1">
+          <div className="font-semibold text-black">
+            ✓ Claimed ${claimTx?.amount ? claimTx.amount.toFixed(4) : currentYield.toFixed(4)} fUSDCx!
+          </div>
+          {claimTx && (
+            <div className="text-neutral-600 truncate text-[9px]">
+              Tx:{" "}
+              <a
+                href={claimTx.hashscanUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="underline font-bold text-black"
+              >
+                {claimTx.txId} ↗
+              </a>
+            </div>
+          )}
         </div>
       )}
     </div>

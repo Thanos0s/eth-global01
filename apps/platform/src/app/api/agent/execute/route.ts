@@ -183,6 +183,27 @@ export async function POST(req: NextRequest) {
     // Commit spend to session
     const updatedSession = commitSessionSpend(sessionId, 0.5, true);
 
+    // Persist event into database audit ledger
+    try {
+      const { insertEvent } = await import("@/lib/db/repo");
+      insertEvent({
+        tokenId: "0.0.4491823",
+        type: "TRANSFER",
+        detail: {
+          action: "HERMES_AUTONOMOUS_PIPELINE_EXECUTED",
+          executionId,
+          propertyAddress: `${property.street}, ${property.city}, ${property.state} ${property.zip}`,
+          x402Settlement: "0.5 HBAR",
+          streamRate: `+$${((property.monthlyRent * 0.1) / 2592000).toFixed(8)}/sec`,
+          baseSepoliaTxHash,
+        },
+        txId: paymentTxId,
+        hashscanUrl: paymentExplorerUrl,
+      });
+    } catch (e) {
+      console.warn("[agent execute] Could not record event in sqlite:", e);
+    }
+
     return NextResponse.json({
       success: true,
       executionId,
