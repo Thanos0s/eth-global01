@@ -25,7 +25,7 @@ interface TransferData {
 }
 
 export function TheGraphInspectorModal({ isOpen, onClose }: TheGraphInspectorModalProps) {
-  const [activeTab, setActiveTab] = useState<"query" | "mcp" | "architecture">("query");
+  const [activeTab, setActiveTab] = useState<"query" | "mcp">("query");
   const [queryType, setQueryType] = useState<"holders" | "transfers" | "meta">("holders");
   const [loading, setLoading] = useState(false);
   const [subgraphData, setSubgraphData] = useState<any>(null);
@@ -112,16 +112,6 @@ export function TheGraphInspectorModal({ isOpen, onClose }: TheGraphInspectorMod
             }`}
           >
             Subgraph MCP Tooling
-          </button>
-          <button
-            onClick={() => setActiveTab("architecture")}
-            className={`px-4 py-2.5 rounded-t-xl transition-colors cursor-pointer ${
-              activeTab === "architecture"
-                ? "border-b-2 border-black text-black bg-neutral-100 font-semibold"
-                : "text-neutral-500 hover:text-black"
-            }`}
-          >
-            Hackathon Track Alignment
           </button>
         </div>
 
@@ -298,43 +288,6 @@ export function TheGraphInspectorModal({ isOpen, onClose }: TheGraphInspectorMod
                 <span className="text-neutral-500 font-semibold">&gt; User:</span> "Who owns the highest share in 456 Oak Avenue and how much yield did they earn this month?"<br />
                 <span className="text-black font-bold">&gt; Hermes Agent:</span> Calling <code className="text-black bg-neutral-200 px-1 py-0.5 rounded">subgraph_read.get_top_holders(tokenAddress: "0xf531...")</code>...<br />
                 <span className="text-neutral-700">&gt; Agent Response:</span> "The top holder is 0x742d... with 250 OAK-RWA tokens (25% share). Based on monthly rental collections of $3,800, their Superfluid CFA stream continuously accrues $950.00/month."
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Tab 3: Track Alignment */}
-        {activeTab === "architecture" && (
-          <div className="mt-4 flex-1 overflow-y-auto space-y-4 pr-1 text-xs text-neutral-700">
-            <div className="rounded-2xl border border-neutral-300 bg-neutral-50 p-4">
-              <h4 className="font-bold text-sm text-black mb-1">
-                Aligned with The Graph Track: "One AI track, two ways to build"
-              </h4>
-              <p className="text-neutral-600">
-                Prism 8 directly satisfies both halves of the track prompt + the featured x402 payment challenge.
-              </p>
-            </div>
-
-            <div className="space-y-3">
-              <div className="rounded-2xl border border-neutral-300 bg-white p-4">
-                <span className="font-bold text-black text-sm">Way 1: Tooling for AI Environments</span>
-                <p className="mt-1 text-neutral-600">
-                  Built standard TypeScript Model Context Protocol (MCP) servers (<code className="text-black bg-neutral-200 px-1 py-0.5 rounded">read.ts</code> and <code className="text-black bg-neutral-200 px-1 py-0.5 rounded">write.ts</code>) enabling LLMs to run structured GraphQL queries, monitor indexing health, and autonomously mutate/redeploy Subgraph manifests without human developer intervention.
-                </p>
-              </div>
-
-              <div className="rounded-2xl border border-neutral-300 bg-white p-4">
-                <span className="font-bold text-black text-sm">Way 2: AI Agents Using Live Blockchain Data</span>
-                <p className="mt-1 text-neutral-600">
-                  The Hermes autonomous asset manager consumes The Graph as its live source of truth to index real estate fractional tokens, determine shareholder proportions, verify tenant payments, and stream continuous per-second cashflows via Superfluid CFA.
-                </p>
-              </div>
-
-              <div className="rounded-2xl border border-neutral-300 bg-white p-4">
-                <span className="font-bold text-black text-sm">Autonomous x402 Payment Challenge</span>
-                <p className="mt-1 text-neutral-600">
-                  The Graph track prompt asks: <em>"or let your agent pay per query autonomously with x402."</em> Prism 8 integrates the native Hedera x402 protocol, where the agent pays 0.5 HBAR per request autonomously with Blocky402 facilitator and HCS audit receipts, proving zero-subscription machine commerce.
-                </p>
               </div>
             </div>
           </div>
