@@ -39,8 +39,18 @@ export function TheGraphInspectorModal({ isOpen, onClose }: TheGraphInspectorMod
     setLoading(true);
     try {
       const res = await fetch("/api/subgraph");
-      const json = await res.json();
-      setSubgraphData(json);
+      const contentType = res.headers.get("content-type") || "";
+      if (contentType.includes("application/json")) {
+        const json = await res.json();
+        setSubgraphData(json);
+      } else {
+        const text = await res.text();
+        try {
+          setSubgraphData(JSON.parse(text));
+        } catch {
+          console.error("Non-JSON response from /api/subgraph");
+        }
+      }
     } catch (e) {
       console.error(e);
     } finally {
