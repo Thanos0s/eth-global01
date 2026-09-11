@@ -422,9 +422,6 @@ export function AgenticSafetyCockpit({ onWorkflowComplete }: AgenticSafetyCockpi
             <div>Intercepted Spend: <strong className="text-black block text-sm">{guardrailAlert.guardrailDetails?.attemptedSpend}</strong></div>
             <div>Protected Balance: <strong className="text-black block text-sm">{guardrailAlert.guardrailDetails?.remainingSessionBudget}</strong></div>
           </div>
-          <div className="text-xs text-neutral-500 italic pt-1">
-            ✓ Hackathon Security Proof: Hermes cannot drain assets or call undelegated contracts beyond the user's signed EIP-712 envelope.
-          </div>
         </div>
       )}
 
