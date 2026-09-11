@@ -89,7 +89,7 @@ export async function POST(req: NextRequest) {
     steps.push({
       stepNumber: 1,
       name: "Autonomous x402 Micropayment Settlement",
-      network: "Hedera Testnet",
+      network: "Hedera Testnet (x402 Rail)",
       status: "CONFIRMED",
       txId: paymentTxId,
       explorerUrl: paymentExplorerUrl,
@@ -135,7 +135,7 @@ export async function POST(req: NextRequest) {
     steps.push({
       stepNumber: 3,
       name: "The Graph Studio Holder Discovery",
-      network: "The Graph Protocol (Sepolia Indexer)",
+      network: "The Graph (Sepolia Indexer)",
       status: "INDEXED",
       txId: "QmQ65v4hUvG1K3T6q21bL5f9N4d9zXJ8pD32A1f6K9z1ab",
       explorerUrl: "/api/subgraph",
@@ -172,7 +172,7 @@ export async function POST(req: NextRequest) {
     steps.push({
       stepNumber: 4,
       name: "Superfluid CFA Per-Second Yield Stream Creation",
-      network: "Base Sepolia (CFAv1 Forwarder 0xcfA132E353cB4E398080B9700609bb008eceB125)",
+      network: "Base Sepolia (Superfluid CFA)",
       status: "STREAMING_ACTIVE",
       txId: baseSepoliaTxHash,
       explorerUrl: baseSepoliaExplorerUrl,

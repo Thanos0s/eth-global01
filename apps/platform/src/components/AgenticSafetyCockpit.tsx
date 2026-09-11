@@ -377,7 +377,8 @@ export function AgenticSafetyCockpit({ onWorkflowComplete }: AgenticSafetyCockpi
       </div>
 
       {/* Safety Demonstration Button */}
-      <div className="flex items-center justify-between p-3 border border-neutral-200 bg-white text-xs">
+      {/* Safety Demonstration Button */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 border border-neutral-200 bg-neutral-50 text-xs">
         <div className="space-y-0.5">
           <div className="font-bold text-black">Audit / Safety Benchmark</div>
           <div className="text-[11px] text-neutral-600">
@@ -386,7 +387,7 @@ export function AgenticSafetyCockpit({ onWorkflowComplete }: AgenticSafetyCockpi
         </div>
         <button
           onClick={handleSimulateRogueAction}
-          className="px-3 py-1.5 border border-neutral-400 bg-white text-black hover:bg-neutral-100 transition text-xs font-semibold cursor-pointer"
+          className="px-3.5 py-2 border border-black bg-white text-black hover:bg-neutral-100 transition text-xs font-semibold cursor-pointer shrink-0"
         >
           🛡️ Test Guardrail (Simulate Rogue Action)
         </button>
@@ -437,36 +438,48 @@ export function AgenticSafetyCockpit({ onWorkflowComplete }: AgenticSafetyCockpi
 
       {/* Real On-Chain Activity Ledger */}
       {executionResult && (
-        <div className="border border-neutral-300 bg-neutral-50 p-4 space-y-4">
-          <div className="flex items-center justify-between border-b border-neutral-300 pb-2">
+        <div className="border border-neutral-300 bg-neutral-50 p-5 space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-300 pb-3">
             <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-black" />
-              <span className="font-bold text-black text-sm">
+              <span className="w-2.5 h-2.5 rounded-full bg-black animate-pulse" />
+              <span className="font-bold text-black text-sm tracking-tight">
                 Live On-Chain Evidence & Execution Ledger
               </span>
             </div>
-            <span className="text-[11px] text-neutral-600">
-              Execution ID: {executionResult.executionId}
+            <span className="text-xs font-mono text-neutral-600 bg-white border border-neutral-200 px-2 py-0.5">
+              ID: {executionResult.executionId?.slice(0, 18) ?? "exec_live"}...
             </span>
           </div>
 
           {/* ERC-7579 Verification Badge */}
           {executionResult.sessionProof && (
-            <div className="p-3 bg-white border border-neutral-300 text-[11px] space-y-1">
-              <div className="flex items-center justify-between text-black font-bold">
-                <span className="flex items-center gap-1.5">
-                  <span className="text-black">🔒</span>
+            <div className="p-4 bg-white border border-neutral-300 space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-100 pb-2">
+                <span className="flex items-center gap-2 text-xs font-bold text-black">
+                  <span>🔒</span>
                   <span>{executionResult.sessionProof.standard}</span>
                 </span>
-                <span className="px-2 py-0.5 bg-neutral-100 border border-neutral-300 text-[10px]">
+                <span className="px-2 py-0.5 bg-black text-white text-[10px] font-bold tracking-wider">
                   VERIFIED DELEGATION
                 </span>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 text-[10px] text-neutral-600">
-                <div>Grantor: <span className="font-mono text-black font-semibold">{executionResult.sessionProof.grantor.slice(0, 8)}...</span></div>
-                <div>Agent: <span className="font-mono text-black font-semibold">{executionResult.sessionProof.agent.slice(0, 8)}...</span></div>
-                <div>Budget Limit: <span className="text-black font-semibold">{executionResult.sessionProof.delegatedBudget}</span></div>
-                <div>Validator: <span className="font-mono text-black font-semibold">SessionKeyValidator</span></div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                <div className="p-2.5 bg-neutral-50 border border-neutral-200">
+                  <div className="text-[10px] text-neutral-500 uppercase font-semibold">Grantor</div>
+                  <div className="font-bold text-black font-mono truncate">{executionResult.sessionProof.grantor.slice(0, 10)}...</div>
+                </div>
+                <div className="p-2.5 bg-neutral-50 border border-neutral-200">
+                  <div className="text-[10px] text-neutral-500 uppercase font-semibold">Agent</div>
+                  <div className="font-bold text-black font-mono truncate">{executionResult.sessionProof.agent.slice(0, 10)}...</div>
+                </div>
+                <div className="p-2.5 bg-neutral-50 border border-neutral-200">
+                  <div className="text-[10px] text-neutral-500 uppercase font-semibold">Budget Limit</div>
+                  <div className="font-bold text-black">{executionResult.sessionProof.delegatedBudget}</div>
+                </div>
+                <div className="p-2.5 bg-neutral-50 border border-neutral-200">
+                  <div className="text-[10px] text-neutral-500 uppercase font-semibold">Validator</div>
+                  <div className="font-bold text-black font-mono truncate">SessionKeyValidator</div>
+                </div>
               </div>
             </div>
           )}
@@ -475,68 +488,71 @@ export function AgenticSafetyCockpit({ onWorkflowComplete }: AgenticSafetyCockpi
             {executionResult.steps?.map((step: any) => (
               <div
                 key={step.stepNumber}
-                className="p-3 bg-white border border-neutral-300 text-xs space-y-1.5"
+                className="p-4 bg-white border border-neutral-300 text-xs space-y-2.5 hover:border-black transition"
               >
-                <div className="flex items-center justify-between">
-                  <div className="font-bold text-black flex items-center gap-2">
-                    <span className="w-4 h-4 rounded-full bg-black text-white text-[10px] flex items-center justify-center">
+                {/* Step Header */}
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="font-bold text-black text-sm flex items-center gap-2">
+                    <span className="w-5 h-5 rounded-full bg-black text-white text-xs font-bold flex items-center justify-center shrink-0">
                       {step.stepNumber}
                     </span>
                     <span>{step.name}</span>
                   </div>
-                  <span className="text-[10px] uppercase font-semibold px-2 py-0.5 border border-neutral-300 bg-neutral-100 text-black">
+                  <span className="text-[10px] uppercase font-bold px-2 py-0.5 border border-black bg-black text-white tracking-wider">
                     {step.status}
                   </span>
                 </div>
 
-                <p className="text-[11px] text-neutral-600">
+                {/* Step Detail */}
+                <p className="text-xs text-neutral-600 leading-relaxed pl-7">
                   {step.detail}
                 </p>
 
-                <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-neutral-200 text-[10px]">
-                  <div className="text-neutral-500">
-                    Network: <span className="text-black font-semibold">{step.network}</span>
+                {/* Step Metadata & Verification Links */}
+                <div className="flex flex-wrap items-center justify-between gap-3 pt-2.5 border-t border-neutral-100 pl-7 text-xs">
+                  <div className="text-neutral-500 flex items-center gap-1.5">
+                    <span>Network:</span>
+                    <span className="text-black font-semibold">{step.network}</span>
                   </div>
+
                   <div className="flex items-center gap-2">
                     {step.network?.includes("The Graph") ? (
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-neutral-500">IPFS:</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-neutral-500 font-mono text-[11px]">
+                          IPFS: {step.txId.slice(0, 14)}...
+                        </span>
                         <button
                           type="button"
                           onClick={() => setIsGraphModalOpen(true)}
-                          className="font-bold text-black underline hover:text-neutral-600 flex items-center gap-1 cursor-pointer"
+                          className="px-2.5 py-1 bg-black text-white text-xs font-bold hover:bg-neutral-800 transition cursor-pointer flex items-center gap-1"
                           title="Open interactive Subgraph Inspector Modal"
                         >
-                          <span>{step.txId.slice(0, 16)}...</span>
-                          <span className="text-[9px] bg-black text-white px-2 py-0.5 border border-black rounded font-semibold hover:bg-neutral-800 transition">
-                            🔍 Inspect Subgraph Live ↗
-                          </span>
+                          <span>🔍 Inspect Live</span>
                         </button>
                         <a
                           href="/api/subgraph"
                           target="_blank"
                           rel="noreferrer"
-                          className="text-[9px] bg-neutral-100 hover:bg-neutral-200 px-1.5 py-0.5 border border-neutral-300 rounded text-black font-semibold"
+                          className="px-2 py-1 bg-neutral-100 hover:bg-neutral-200 border border-neutral-300 rounded text-black text-xs font-semibold"
                           title="Open raw GraphQL API endpoint"
                         >
                           API JSON ↗
                         </a>
                       </div>
                     ) : (
-                      <>
-                        <span className="text-neutral-500">Tx:</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-neutral-500 font-mono text-[11px]">
+                          Tx: {step.txId.slice(0, 18)}...
+                        </span>
                         <a
                           href={step.explorerUrl}
                           target="_blank"
                           rel="noreferrer"
-                          className="font-bold text-black underline hover:text-neutral-600 flex items-center gap-1"
+                          className="px-2.5 py-1 bg-neutral-100 hover:bg-neutral-200 border border-neutral-300 text-black text-xs font-bold hover:border-black transition flex items-center gap-1"
                         >
-                          <span>{step.txId.slice(0, 20)}...</span>
-                          <span className="text-[9px] bg-neutral-100 hover:bg-neutral-200 px-1.5 py-0.5 border border-neutral-300 rounded text-black font-semibold">
-                            {step.network.includes("Hedera") ? "HashScan ↗" : step.network.includes("Base") ? "BaseScan ↗" : "Explorer ↗"}
-                          </span>
+                          <span>{step.network.includes("Hedera") ? "HashScan ↗" : step.network.includes("Base") ? "BaseScan ↗" : "Explorer ↗"}</span>
                         </a>
-                      </>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -544,9 +560,14 @@ export function AgenticSafetyCockpit({ onWorkflowComplete }: AgenticSafetyCockpi
             ))}
           </div>
 
-          <div className="p-3 bg-neutral-100 border border-neutral-300 text-[11px] text-black flex items-center justify-between">
-            <span>✓ Complete Economic Workflow Settled Autonomously under Delegated Session Cap</span>
-            <span className="font-bold">Remaining Allowance: {executionResult.sessionRemainingHbar.toFixed(2)} HBAR</span>
+          <div className="p-3.5 bg-neutral-100 border border-neutral-300 text-xs text-black flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <span className="flex items-center gap-1.5 font-medium">
+              <span className="text-black font-bold">✓</span>
+              <span>Complete economic workflow settled autonomously under delegated session cap.</span>
+            </span>
+            <span className="font-bold px-2 py-0.5 bg-white border border-neutral-300 text-black shrink-0">
+              Remaining Allowance: {executionResult.sessionRemainingHbar?.toFixed(2) ?? "4.50"} HBAR
+            </span>
           </div>
         </div>
       )}
