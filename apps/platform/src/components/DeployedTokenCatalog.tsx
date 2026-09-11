@@ -64,7 +64,7 @@ export default function DeployedTokenCatalog({ tokens }: { tokens: TokenRecord[]
         </div>
 
         {/* 2. Hero Centerpiece: Hermes Agentic Safety Cockpit (ERC-7579 / EIP-712) */}
-        <div id="safety-cockpit" className="scroll-mt-24">
+        <div id="safety-cockpit" className="scroll-mt-24 max-w-5xl mx-auto w-full">
           <AgenticSafetyCockpit />
         </div>
 
