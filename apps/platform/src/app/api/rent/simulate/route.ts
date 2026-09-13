@@ -1,16 +1,16 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { logHcsAuditEvent } from "@/lib/hedera/hcsAudit";
 import { requireOperator } from "@/lib/auth/middleware";
 import { checkRateLimit, getClientIp } from "@/lib/api/rateLimit";
 import { auditLog } from "@/lib/audit/logger";
 import { isDemoMode, DEMO_BANNER } from "@/lib/demo";
+import { handleRoute } from "@/lib/api/helpers";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
   checkRateLimit(getClientIp(req), 30);
 
-  // If in demo mode, return visibly isolated simulation response
   if (isDemoMode()) {
     return NextResponse.json({
       success: true,
@@ -21,35 +21,29 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  const ctx = await requireOperator(req);
+  return handleRoute(async () => {
+    const ctx = await requireOperator(req);
 
-  try {
     const body = await req.json();
     const propertyId = body.propertyId || "prop_456_oak_ave";
     const amount = Number(body.amount || 3800);
     const tenantName = body.tenantName || "Acme Residential Tenant Corp";
-
     const flowRatePerSec = amount / 2592000;
 
-    // Log unforgeable event to Hedera Consensus Service
     const hcsReceipt = await logHcsAuditEvent({
       event: "TENANT_RENT_DEPOSITED",
       propertyId,
       amount: `$${amount} USD`,
-      metadata: {
-        tenant: tenantName,
-        monthlyRate: amount,
-        calculatedFlowRate: flowRatePerSec,
-      },
+      metadata: { tenant: tenantName, monthlyRate: amount, calculatedFlowRate: flowRatePerSec },
     });
 
     const txId = hcsReceipt.txId || null;
     const hashscanUrl = hcsReceipt.hashscanUrl || null;
 
-    // Persist event to sqlite audit trail
     try {
       const { insertEvent } = await import("@/lib/db/repo");
-      const targetTokenId = propertyId.startsWith("0.") || propertyId.startsWith("0x") ? propertyId : "0.0.4491823";
+      const targetTokenId =
+        propertyId.startsWith("0.") || propertyId.startsWith("0x") ? propertyId : "0.0.4491823";
       insertEvent({
         tokenId: targetTokenId,
         type: "TRANSFER",
@@ -88,8 +82,5 @@ export async function POST(req: NextRequest) {
       hcsAudit: hcsReceipt,
       depositTimestamp: new Date().toISOString(),
     });
-  } catch (error) {
-    const msg = error instanceof Error ? error.message : "Internal server error";
-    return NextResponse.json({ success: false, error: msg }, { status: 500 });
-  }
+  });
 }

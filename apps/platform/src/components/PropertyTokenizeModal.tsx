@@ -130,6 +130,48 @@ export function PropertyTokenizeModal({
     setIsDeploying(true);
     setError(null);
 
+    // Auto sign-in: obtain nonce → sign with MetaMask → exchange for session cookie
+    const ensureOperatorSession = async () => {
+      const rawProvider = getMetaMaskProvider();
+      if (!rawProvider) throw new Error("MetaMask is required to sign in as operator.");
+      const provider = new BrowserProvider(rawProvider);
+      const signer = await provider.getSigner();
+      const address = await signer.getAddress();
+
+      // Get nonce
+      const nonceRes = await fetch("/api/auth/challenge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ address }),
+      });
+      if (!nonceRes.ok) throw new Error("Failed to get auth challenge");
+      const { nonce, message } = await nonceRes.json();
+
+      // Sign the message
+      const signature = await signer.signMessage(message);
+
+      // Exchange for session cookie
+      const verifyRes = await fetch("/api/auth/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ address, nonce, message, signature }),
+      });
+      if (!verifyRes.ok) {
+        const verifyErr = await verifyRes.json().catch(() => ({ error: "Auth failed" }));
+        throw new Error(verifyErr.error || "Operator sign-in failed");
+      }
+    };
+
+    try {
+      setVerificationStep("Signing in as operator...");
+      await ensureOperatorSession();
+    } catch (signInErr: any) {
+      throw new Error(signInErr.message || "Operator sign-in failed");
+    }
+
+
     const tokenName = `${city.trim()} Real Estate Token`;
     const tokenSymbol = `${state.toUpperCase().trim()}${zip.trim().slice(0, 3)}`;
 
