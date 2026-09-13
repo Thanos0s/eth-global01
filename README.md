@@ -207,6 +207,16 @@ See [`docs/demo-script.md`](docs/demo-script.md) for the step-by-step judge walk
 
 ---
 
+## 🤖 AI Tools Attribution & Spec-Driven Development
+
+In full compliance with ETHGlobal 2026 AI guidelines, all AI tool usage is transparently documented:
+- **Full Attribution & Spec Record:** [`docs/AI_ATTRIBUTION_AND_SPEC.md`](docs/AI_ATTRIBUTION_AND_SPEC.md)
+- **Tools Used:** Nous Research Hermes Agent (autonomous on-chain executor), Google Antigravity / DeepMind coding assistant (pair-programming, test coverage), Claude Code (MCP server interfaces), Cursor (TypeScript/Tailwind scaffolding).
+- **Human Contributions:** System and multi-chain architecture, ERC-7579 session key security model, single-use invoice replay protection, USPS DPV normalization pipeline, and production deployment orchestration.
+- **Spec-Driven Planning Artifacts:** [`docs/security/SECURITY_ARCHITECTURE.md`](docs/security/SECURITY_ARCHITECTURE.md), [`docs/security/THREAT_MODEL.md`](docs/security/THREAT_MODEL.md), [`docs/security/PRODUCTION_READINESS_CHECKLIST.md`](docs/security/PRODUCTION_READINESS_CHECKLIST.md).
+
+---
+
 ## 📜 Credits & Sponsors
 - [Hermes Agent](https://github.com/NousResearch/hermes-agent) by [Nous Research](https://nousresearch.com/)
 - [Blocky402 Facilitator](https://blocky402.com/) & [Hedera Hashgraph](https://hedera.com/)
@@ -214,3 +224,4 @@ See [`docs/demo-script.md`](docs/demo-script.md) for the step-by-step judge walk
 - [Superfluid Finance](https://superfluid.finance/)
 - [Chainlink Functions](https://chain.link/functions)
 - [World ID](https://worldcoin.org/world-id)
+
