@@ -17,10 +17,10 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  checkRateLimit(getClientIp(req), 30);
-  const ctx = await requireOperator(req);
-
   return handleRoute(async () => {
+    checkRateLimit(getClientIp(req), 30);
+    const ctx = await requireOperator(req);
+
     const body = await readJson<unknown>(req);
     const input = createTokenSchema.parse(body);
     if (input.blockchain !== "HEDERA") {

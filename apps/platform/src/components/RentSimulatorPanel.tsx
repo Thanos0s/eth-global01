@@ -1,6 +1,8 @@
-"use client";
+﻿"use client";
 
 import React, { useState } from "react";
+import { BrowserProvider } from "ethers";
+import { getMetaMaskProvider } from "@/lib/evm/browserProvider";
 
 export interface RentSimulatorPanelProps {
   propertyId?: string;
@@ -18,14 +20,40 @@ export function RentSimulatorPanel({
   const [depositResult, setDepositResult] = useState<any | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const ensureSession = async () => {
+    const rawProvider = getMetaMaskProvider();
+    if (!rawProvider) return;
+    const provider = new BrowserProvider(rawProvider);
+    const signer = await provider.getSigner();
+    const address = await signer.getAddress();
+    const nonceRes = await fetch("/api/auth/challenge", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ address }),
+    });
+    if (!nonceRes.ok) return;
+    const { nonce, message } = await nonceRes.json();
+    const signature = await signer.signMessage(message);
+    await fetch("/api/auth/verify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ address, nonce, message, signature }),
+    });
+  };
+
   const handleDepositRent = async () => {
     setIsDepositing(true);
     setError(null);
 
     try {
+      await ensureSession();
+
       const res = await fetch("/api/rent/simulate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           propertyId,
           amount: rentAmount,
@@ -34,14 +62,10 @@ export function RentSimulatorPanel({
       });
 
       const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || "Deposit simulation failed");
-      }
+      if (!res.ok) throw new Error(data.error || "Deposit failed");
 
       setDepositResult(data);
-      if (onDepositSuccess) {
-        onDepositSuccess(rentAmount, data);
-      }
+      if (onDepositSuccess) onDepositSuccess(rentAmount, data);
     } catch (err: any) {
       setError(err.message || "Failed to trigger rent deposit");
     } finally {
@@ -51,7 +75,7 @@ export function RentSimulatorPanel({
 
   return (
     <div className="flex flex-col justify-between h-full font-mono text-black space-y-3">
-      {/* Top Status Header */}
+      {/* Header */}
       <div className="flex items-center justify-between border-b border-neutral-200 pb-2">
         <div className="flex items-center gap-1.5 text-xs">
           <span className="w-2 h-2 rounded-full bg-black animate-pulse" />
@@ -62,7 +86,7 @@ export function RentSimulatorPanel({
         </span>
       </div>
 
-      {/* Preset Amount Chips */}
+      {/* Presets */}
       <div className="flex items-center justify-between gap-1 text-[11px]">
         <span className="text-neutral-500 text-[10px]">Presets:</span>
         <div className="flex gap-1.5">
@@ -83,7 +107,7 @@ export function RentSimulatorPanel({
         </div>
       </div>
 
-      {/* Deposit Input & Trigger */}
+      {/* Input + Button */}
       <div className="bg-neutral-50 p-2.5 border border-neutral-200 space-y-2">
         <div className="flex items-center gap-2">
           <div className="relative flex-1">
@@ -101,31 +125,52 @@ export function RentSimulatorPanel({
             disabled={isDepositing || rentAmount <= 0}
             className="bg-black text-white px-3 py-1.5 text-xs font-bold border border-black hover:bg-neutral-800 disabled:opacity-40 transition cursor-pointer whitespace-nowrap"
           >
-            {isDepositing ? "Injecting..." : "Inject Rent"}
+            {isDepositing ? "Signing & Injecting..." : "Inject Rent"}
           </button>
         </div>
       </div>
 
-      {/* Audit Confirmation Status */}
+      {/* Result */}
       {depositResult ? (
         <div className="text-[10px] bg-neutral-100 border border-neutral-300 p-2 space-y-1">
           <div className="flex justify-between font-bold text-black">
-            <span>✓ ${depositResult.amountDeposited?.toLocaleString()} Inflow Injected</span>
-            <span>Flow Accelerated</span>
+            <span>✓ ${depositResult.amountDeposited?.toLocaleString()} On-Chain</span>
+            <span className="text-[9px] text-neutral-500">HCS Confirmed</span>
           </div>
           <div className="flex justify-between text-neutral-600 border-t border-neutral-200 pt-1">
-            <span>HCS Receipt:</span>
-            <span className="font-mono text-black font-bold">Seq #{depositResult.hcsAudit?.sequenceNumber || "83527"} ↗</span>
+            <span>HCS Seq:</span>
+            <span className="font-mono text-black font-bold">
+              #{depositResult.hcsAudit?.sequenceNumber}
+            </span>
+          </div>
+          {depositResult.hcsAudit?.txId && (
+            <div className="flex justify-between text-neutral-600">
+              <span>Tx:</span>
+              <a
+                href={depositResult.hcsAudit?.hashscanUrl || `https://hashscan.io/testnet/transaction/${encodeURIComponent(depositResult.hcsAudit.txId)}`}
+                target="_blank"
+                rel="noreferrer"
+                className="text-black underline font-bold truncate max-w-[140px]"
+              >
+                {depositResult.hcsAudit.txId.slice(0, 22)}... ↗
+              </a>
+            </div>
+          )}
+          <div className="flex justify-between text-neutral-600 border-t border-neutral-200 pt-1">
+            <span>Flow Rate:</span>
+            <span className="font-mono text-black">
+              ${(depositResult.calculatedFlowRate || 0).toFixed(6)}/sec
+            </span>
           </div>
         </div>
       ) : error ? (
         <div className="text-[10px] bg-neutral-100 border border-neutral-400 p-2 text-black">
-          {error}
+          ⚠️ {error}
         </div>
       ) : (
         <div className="text-[10px] text-neutral-500 border-t border-neutral-200 pt-2 flex justify-between">
-          <span>Target Contract:</span>
-          <span className="text-black font-bold">Base Sepolia YieldVault</span>
+          <span>On-Chain Proof:</span>
+          <span className="text-black font-bold">Hedera HCS + hashscan ↗</span>
         </div>
       )}
     </div>

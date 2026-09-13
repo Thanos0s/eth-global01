@@ -1,10 +1,10 @@
-import {
+﻿import {
   Client,
   TopicId,
   TopicMessageSubmitTransaction,
   TopicCreateTransaction,
 } from "@hiero-ledger/sdk";
-import { getOperatorClient, getOperatorId } from "./client";
+import { getOperatorClient, getOperatorKey } from "./client";
 import { hashscanTxUrl } from "./format";
 import { isDemoMode } from "@/lib/demo";
 
@@ -37,16 +37,18 @@ export async function getOrCreateAuditTopic(client?: Client): Promise<string> {
 
   try {
     const hederaClient = client ?? getOperatorClient();
+    const operatorKey = getOperatorKey();
     const createTx = await new TopicCreateTransaction()
       .setTopicMemo("LiquidityStream x402 Verifiable Audit Trail")
-      .execute(hederaClient);
-    const receipt = await createTx.getReceipt(hederaClient);
+      .freezeWith(hederaClient)
+      .sign(operatorKey);
+    const response = await createTx.execute(hederaClient);
+    const receipt = await response.getReceipt(hederaClient);
     if (receipt.topicId) {
       cachedTopicId = receipt.topicId.toString();
       return cachedTopicId;
     }
   } catch (err) {
-    // If running in offline test or mock environment
     console.warn("Hedera operator unavailable for live topic creation; using test topic: 0.0.4491823");
   }
 
@@ -54,31 +56,43 @@ export async function getOrCreateAuditTopic(client?: Client): Promise<string> {
   return cachedTopicId;
 }
 
-export async function logHcsAuditEvent(payload: HcsAuditEventPayload): Promise<HcsAuditReceipt> {
-  const timestamp = payload.timestamp ?? new Date().toISOString();
-  const fullPayload = {
-    ...payload,
-    timestamp,
-    standard: "x402-hcs-audit-v1",
-  };
+async function submitHcsMessage(
+  topicIdStr: string,
+  messageStr: string
+): Promise<{ sequenceNumber: number; consensusTimestamp: string; txIdStr: string }> {
+  const client = getOperatorClient();
+  const operatorKey = getOperatorKey();
 
+  const frozen = await new TopicMessageSubmitTransaction()
+    .setTopicId(TopicId.fromString(topicIdStr))
+    .setMessage(messageStr)
+    .freezeWith(client);
+
+  const signed = await frozen.sign(operatorKey);
+  const response = await signed.execute(client);
+  const record = await response.getRecord(client);
+
+  const sequenceNumber = record.receipt.topicSequenceNumber
+    ? Number(record.receipt.topicSequenceNumber)
+    : 1;
+  const consensusTimestamp = record.consensusTimestamp
+    ? record.consensusTimestamp.toDate().toISOString()
+    : new Date().toISOString();
+  const txIdStr = response.transactionId.toString();
+
+  return { sequenceNumber, consensusTimestamp, txIdStr };
+}
+
+export async function logHcsAuditEvent(
+  payload: HcsAuditEventPayload
+): Promise<HcsAuditReceipt> {
+  const timestamp = payload.timestamp ?? new Date().toISOString();
+  const fullPayload = { ...payload, timestamp, standard: "x402-hcs-audit-v1" };
   const messageStr = JSON.stringify(fullPayload);
   const topicIdStr = await getOrCreateAuditTopic();
 
   try {
-    const client = getOperatorClient();
-    const tx = await new TopicMessageSubmitTransaction()
-      .setTopicId(TopicId.fromString(topicIdStr))
-      .setMessage(messageStr)
-      .execute(client);
-
-    const record = await tx.getRecord(client);
-    const sequenceNumber = record.receipt.topicSequenceNumber ? Number(record.receipt.topicSequenceNumber) : 1;
-    const consensusTimestamp = record.consensusTimestamp
-      ? record.consensusTimestamp.toDate().toISOString()
-      : timestamp;
-    const txIdStr = tx.transactionId.toString();
-
+    const { sequenceNumber, consensusTimestamp, txIdStr } = await submitHcsMessage(topicIdStr, messageStr);
     return {
       topicId: topicIdStr,
       sequenceNumber,
@@ -88,12 +102,10 @@ export async function logHcsAuditEvent(payload: HcsAuditEventPayload): Promise<H
       event: payload.event,
     };
   } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
     if (!isDemoMode()) {
-      throw new Error(
-        `Hedera HCS audit logging failed on live network: ${error instanceof Error ? error.message : String(error)}`
-      );
+      throw new Error(`Hedera HCS audit logging failed on live network: ${msg}`);
     }
-    // Fallback deterministic receipt strictly for simulated demo/offline test environments
     const mockSeq = Math.floor(Date.now() / 1000) % 100000;
     const mockTxId = payload.txId ?? `0.0.4491823@${Math.floor(Date.now() / 1000)}.000000000`;
     return {
