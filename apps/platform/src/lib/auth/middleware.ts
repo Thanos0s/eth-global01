@@ -38,6 +38,11 @@ export async function requireOperator(req: Request | NextRequest): Promise<AuthC
     throw new ApiError("Authentication required. Please sign in with an operator wallet.", 401);
   }
   if (ctx.role !== "operator") {
+    const { isOperatorAddress } = await import("./roles");
+    if (isOperatorAddress(ctx.address)) {
+      ctx.role = "operator";
+      return ctx;
+    }
     throw new ApiError("Operator role required for this action.", 403);
   }
   return ctx;
