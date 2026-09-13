@@ -98,6 +98,42 @@ export default function DeployedTokenCatalog({ tokens: initialTokens }: { tokens
           </div>
         </div>
 
+        <section aria-labelledby="judge-mission-title" className="mx-auto w-full max-w-6xl border-2 border-black bg-neutral-50 p-5 sm:p-7">
+          <div className="flex flex-col gap-4 border-b border-neutral-300 pb-5 sm:flex-row sm:items-end sm:justify-between">
+            <div className="max-w-3xl">
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-neutral-500">Judge demo · 60-second proof</p>
+              <h2 id="judge-mission-title" className="mt-2 text-2xl font-bold tracking-tight">Safe autonomous agent, proven in three steps</h2>
+              <p className="mt-2 text-sm leading-6 text-neutral-600">Prism 8 gives Hermes narrowly scoped authority to pay for and verify a real-world asset workflow—then proves the same policy blocks a rogue action.</p>
+            </div>
+            <a href="#safety-cockpit" className="shrink-0 border border-black bg-black px-4 py-2 text-center text-xs font-bold text-white hover:bg-neutral-800">
+              Start the live mission ↓
+            </a>
+          </div>
+
+          <ol className="mt-5 grid gap-3 md:grid-cols-3">
+            <li className="border border-black bg-white p-4">
+              <span className="text-xs font-bold">01 / DELEGATE</span>
+              <h3 className="mt-4 text-sm font-bold">Grant a bounded session</h3>
+              <p className="mt-2 text-xs leading-5 text-neutral-600">Sign the existing EIP-712 session policy: fixed agent, permitted actions, spend cap, and expiry.</p>
+              <p className="mt-4 text-[10px] font-bold uppercase tracking-wide text-neutral-500">Cockpit: Grant Session Key</p>
+            </li>
+            <li className="border border-black bg-white p-4">
+              <span className="text-xs font-bold">02 / EXECUTE</span>
+              <h3 className="mt-4 text-sm font-bold">Let Hermes complete its mission</h3>
+              <p className="mt-2 text-xs leading-5 text-neutral-600">Hermes settles the x402 verification flow, records the HCS audit receipt, and exposes the proof in the mission ledger.</p>
+              <p className="mt-4 text-[10px] font-bold uppercase tracking-wide text-neutral-500">Cockpit: Run Autonomous Mission</p>
+            </li>
+            <li className="border border-black bg-white p-4">
+              <span className="text-xs font-bold">03 / PROVE SAFETY</span>
+              <h3 className="mt-4 text-sm font-bold">Attempt a forbidden action</h3>
+              <p className="mt-2 text-xs leading-5 text-neutral-600">Trigger the rogue-action test and show the ERC-7579 policy rejects an unauthorized treasury transfer.</p>
+              <p className="mt-4 text-[10px] font-bold uppercase tracking-wide text-neutral-500">Cockpit: Test Guardrail</p>
+            </li>
+          </ol>
+
+          <p className="mt-5 border-t border-neutral-300 pt-4 text-xs leading-5 text-neutral-600">The Graph and Superfluid remain the outcome layer: verified assets are indexed for allocation, then their rental yield can stream continuously. Testnet/demo environment; no real-world asset or capital is represented as production-ready.</p>
+        </section>
+
         <UserJourney hasAssets={tokens.length > 0} onTokenize={() => setIsTokenizeOpen(true)} />
 
         {/* Safety Cockpit */}

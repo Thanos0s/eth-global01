@@ -74,9 +74,8 @@ async function runTests() {
   // Step 5: Execute deployed ERC-7579 / ERC-4337 SessionKeyValidator behavioral test suite
   console.log("\n[Test 5] Executing deployed ERC-7579 / ERC-4337 SessionKeyValidator behavioral integration test suite...");
   const { execFileSync } = await import("node:child_process");
-  execFileSync("npx", ["vitest", "run", "src/__tests__/erc7579Execution.test.ts"], {
+  execFileSync(process.platform === "win32" ? "npx.cmd" : "npx", ["vitest", "run", "src/__tests__/erc7579Execution.test.ts"], {
     stdio: "inherit",
-    shell: true,
   });
   console.log("✓ Test 5 Passed: Deployed ERC-7579 / ERC-4337 contract behavioral suite passed.");
 
