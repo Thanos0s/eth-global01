@@ -68,7 +68,7 @@ export function EvmWalletProvider({ children }: { children: ReactNode }) {
     setConnecting(true);
     setError(null);
     try {
-      let targetProvider: any = typeof window !== "undefined" ? window.ethereum : undefined;
+      let targetProvider: any = typeof window !== "undefined" ? (window as any).ethereum : undefined;
 
       if (typeof window !== "undefined") {
         const win = window as any;

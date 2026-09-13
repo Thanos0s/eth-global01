@@ -1,4 +1,6 @@
-﻿interface WindowState {
+import { ApiError } from "./helpers";
+
+interface WindowState {
   count: number;
   resetAt: number;
 }
@@ -16,8 +18,6 @@ export function checkRateLimit(ip: string, limitPerMinute = 100): void {
 
   current.count++;
   if (current.count > limitPerMinute) {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { ApiError } = require("@/lib/api/helpers");
     throw new ApiError("Too many requests. Rate limit exceeded.", 429);
   }
 }

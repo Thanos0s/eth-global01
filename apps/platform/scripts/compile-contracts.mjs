@@ -30,7 +30,7 @@ const sources = {};
 for (const file of targetFiles) {
   const filePath = path.join(contractsDir, file);
   if (fs.existsSync(filePath)) {
-    sources[file] = { content: fs.readFileSync(filePath, "utf8") };
+    sources[file] = { content: fs.readFileSync(filePath, "utf8").replace(/^\uFEFF/, "") };
   }
 }
 
