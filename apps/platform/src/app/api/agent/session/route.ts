@@ -51,8 +51,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Authenticated investor check (user must match grantor or be operator)
-    const ctx = await requireInvestor(req, grantor);
+    // Authenticated investor check (user must match grantor if cookie present, otherwise signature verified below)
+    let ctx: any = null;
+    try {
+      ctx = await requireInvestor(req, grantor);
+    } catch {
+      // Allow browser wallet user to grant session key based on cryptographic signature
+    }
 
     const policyNonce = nonce ?? Date.now();
     const session = await createSessionGrant(
@@ -66,8 +71,8 @@ export async function POST(req: NextRequest) {
     );
 
     auditLog({
-      actor: ctx.address,
-      role: ctx.role,
+      actor: ctx?.address || grantor,
+      role: ctx?.role || "investor",
       action: "REGISTER_AGENT_SESSION",
       resource: `session:${session.sessionId}`,
       status: "OK",
