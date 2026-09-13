@@ -6,6 +6,10 @@ import { getOperatorId } from "@/lib/hedera/client";
 import { createTokenSchema } from "@/lib/validation";
 import { configuredHederaNetwork } from "@/lib/chains";
 
+import { requireOperator } from "@/lib/auth/middleware";
+import { checkRateLimit, getClientIp } from "@/lib/api/rateLimit";
+import { auditLog } from "@/lib/audit/logger";
+
 export const dynamic = "force-dynamic";
 
 export async function GET() {
@@ -13,6 +17,9 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
+  checkRateLimit(getClientIp(req), 30);
+  const ctx = requireOperator(req);
+
   return handleRoute(async () => {
     const body = await readJson<unknown>(req);
     const input = createTokenSchema.parse(body);
@@ -61,25 +68,28 @@ export async function POST(req: Request) {
       hashscanUrl: created.hashscanUrl,
     });
 
-    // Ensure initial treasury and investor holders exist
+    // Ensure initial treasury holder exists
     try {
       const { ensureHolder, updateHolder } = await import("@/lib/db/repo");
-      ensureHolder(token.id, token.treasuryAccountId, "0x89205A3A3b2A69De6Dbf7f01ED13B2108B2c43e7");
+      ensureHolder(token.id, token.treasuryAccountId, null);
       updateHolder(token.id, token.treasuryAccountId, {
         associated: true,
         kycGranted: true,
         status: "WHITELISTED",
       });
-      const demoInvestor = "0x28a8746e75304c0780e011bed21c72cd78cd535e";
-      ensureHolder(token.id, demoInvestor, demoInvestor);
-      updateHolder(token.id, demoInvestor, {
-        associated: true,
-        kycGranted: true,
-        status: "WHITELISTED",
-      });
     } catch (holderErr) {
-      console.warn("Could not insert initial holders:", holderErr);
+      console.warn("Could not insert initial treasury holder:", holderErr);
     }
+
+    auditLog({
+      actor: ctx.address,
+      role: ctx.role,
+      action: "CREATE_HEDERA_TOKEN",
+      resource: `token:${token.id}`,
+      status: "OK",
+      detail: { name: token.name, symbol: token.symbol },
+      ip: getClientIp(req),
+    });
 
     return NextResponse.json({ token }, { status: 201 });
   });

@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireOperator } from "@/lib/auth/middleware";
+import { checkRateLimit, getClientIp } from "@/lib/api/rateLimit";
+import { auditLog } from "@/lib/audit/logger";
 
 interface StreamRecord {
   propertyId: string;
@@ -12,18 +15,6 @@ interface StreamRecord {
 }
 
 const activeStreamsMap = new Map<string, StreamRecord>();
-
-// Seed a default stream for the demo
-activeStreamsMap.set("prop_456_oak_ave:default", {
-  propertyId: "prop_456_oak_ave",
-  token: "0x42bb40bF79730451B11f6De1CbA222F17b87Afd7",
-  receiver: "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
-  flowRate: 1620370370370,
-  monthlyRentEquivUsd: 3800,
-  startedAt: Math.floor(Date.now() / 1000) - 7200, // started 2 hours ago
-  status: "ACTIVE",
-  txHash: "0x7b58a129d21e843f5451e944738590172bf4212a",
-});
 
 export async function GET(req: NextRequest) {
   const propertyId = req.nextUrl.searchParams.get("propertyId");
@@ -39,13 +30,30 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  checkRateLimit(getClientIp(req), 30);
+  const ctx = requireOperator(req);
+
   try {
     const body = (await req.json()) as StreamRecord;
+    if (!body.propertyId || !body.receiver || !body.flowRate) {
+      return NextResponse.json({ error: "Missing required stream parameters" }, { status: 400 });
+    }
+
     const key = `${body.propertyId}:${body.receiver?.toLowerCase()}`;
     activeStreamsMap.set(key, body);
 
+    auditLog({
+      actor: ctx.address,
+      role: ctx.role,
+      action: "CREATE_OR_UPDATE_STREAM",
+      resource: `property:${body.propertyId}:receiver:${body.receiver}`,
+      status: "OK",
+      detail: { flowRate: body.flowRate, monthlyRent: body.monthlyRentEquivUsd },
+      ip: getClientIp(req),
+    });
+
     return NextResponse.json({ success: true, stream: body });
-  } catch (err) {
+  } catch {
     return NextResponse.json({ error: "Invalid stream payload" }, { status: 400 });
   }
 }

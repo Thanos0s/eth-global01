@@ -5,12 +5,19 @@ import { transferFromTreasury } from "@/lib/hedera/tokenService";
 import { transferSchema } from "@/lib/validation";
 import { transferEvmFromTreasury } from "@/lib/evm/client";
 
+import { requireOperatorOrAgent } from "@/lib/auth/middleware";
+import { checkRateLimit, getClientIp } from "@/lib/api/rateLimit";
+import { auditLog } from "@/lib/audit/logger";
+
 export const dynamic = "force-dynamic";
 
 /** Treasury -> holder distribution. Hedera itself enforces association/KYC/freeze regardless
  *  of our local bookkeeping, so this will fail on-chain if the holder isn't actually compliant
  *  even if our DB state is stale. */
 export async function POST(req: Request, { params }: { params: Promise<{ tokenId: string }> }) {
+  checkRateLimit(getClientIp(req), 30);
+  const ctx = requireOperatorOrAgent(req);
+
   return handleRoute(async () => {
     const { tokenId } = await params;
     const token = requireToken(tokenId);
@@ -34,6 +41,16 @@ export async function POST(req: Request, { params }: { params: Promise<{ tokenId
       detail: { amount },
       txId: result.txId,
       hashscanUrl: result.hashscanUrl,
+    });
+
+    auditLog({
+      actor: ctx.address,
+      role: ctx.role,
+      action: "TRANSFER_FROM_TREASURY",
+      resource: `token:${tokenId}:recipient:${accountId}`,
+      status: "OK",
+      detail: { amount, txId: result.txId },
+      ip: getClientIp(req),
     });
 
     return NextResponse.json(result);

@@ -3,12 +3,17 @@ import {
   verifyIdentityCredential,
   WorldProofError,
 } from "@/lib/worldid/verification";
+import { requireInvestor } from "@/lib/auth/middleware";
+import { checkRateLimit, getClientIp } from "@/lib/api/rateLimit";
+import { auditLog } from "@/lib/audit/logger";
 
 export const runtime = "nodejs";
 
 type IdentityPolicy = "identity-age" | "identity-us";
 
 export async function POST(request: Request) {
+  checkRateLimit(getClientIp(request), 30);
+  const ctx = requireInvestor(request);
   const body = (await request.json().catch(() => null)) as
     | { result?: unknown; policy?: IdentityPolicy }
     | null;

@@ -142,4 +142,89 @@ CREATE INDEX IF NOT EXISTS idx_world_id_verifications_status
   ON world_id_verifications(status, created_at ASC);
 CREATE INDEX IF NOT EXISTS idx_world_id_verifications_holder
   ON world_id_verifications(token_id, account_id, check_kind, id DESC);
+
+CREATE TABLE IF NOT EXISTS auth_sessions (
+  id          TEXT PRIMARY KEY,
+  address     TEXT NOT NULL,
+  role        TEXT NOT NULL,
+  issued_at   INTEGER NOT NULL,
+  expires_at  INTEGER NOT NULL,
+  revoked     INTEGER NOT NULL DEFAULT 0,
+  user_agent  TEXT,
+  ip          TEXT
+);
+
+CREATE TABLE IF NOT EXISTS auth_nonces (
+  nonce       TEXT PRIMARY KEY,
+  address     TEXT NOT NULL,
+  consumed    INTEGER NOT NULL DEFAULT 0,
+  issued_at   INTEGER NOT NULL,
+  expires_at  INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS audit_log (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  actor      TEXT NOT NULL,
+  role       TEXT NOT NULL,
+  action     TEXT NOT NULL,
+  resource   TEXT NOT NULL,
+  status     TEXT NOT NULL,
+  detail     TEXT,
+  ip         TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS agent_sessions (
+  id                    TEXT PRIMARY KEY,
+  grantor               TEXT NOT NULL,
+  agent_address         TEXT NOT NULL,
+  validator_contract    TEXT NOT NULL,
+  max_spend_hbar        REAL NOT NULL,
+  max_flow_monthly_usd  REAL NOT NULL,
+  allowed_actions       TEXT NOT NULL,
+  chain_id              INTEGER NOT NULL,
+  nonce                 INTEGER NOT NULL,
+  expires_at            INTEGER NOT NULL,
+  signature             TEXT NOT NULL,
+  signature_type        TEXT NOT NULL DEFAULT 'EIP712',
+  spent_hbar            REAL NOT NULL DEFAULT 0,
+  active_streams        INTEGER NOT NULL DEFAULT 0,
+  status                TEXT NOT NULL DEFAULT 'ACTIVE',
+  created_at            INTEGER NOT NULL,
+  UNIQUE (grantor, nonce)
+);
+
+CREATE TABLE IF NOT EXISTS agent_nonces (
+  session_id  TEXT NOT NULL REFERENCES agent_sessions(id),
+  nonce       TEXT NOT NULL,
+  used_at     INTEGER NOT NULL,
+  PRIMARY KEY (session_id, nonce)
+);
+
+CREATE TABLE IF NOT EXISTS agent_spend_log (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  session_id  TEXT NOT NULL REFERENCES agent_sessions(id),
+  action      TEXT NOT NULL,
+  spend_hbar  REAL NOT NULL,
+  timestamp   INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS outbox (
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  type            TEXT NOT NULL,
+  payload         TEXT NOT NULL,
+  status          TEXT NOT NULL DEFAULT 'PENDING',
+  attempts        INTEGER NOT NULL DEFAULT 0,
+  last_error      TEXT,
+  idempotency_key TEXT UNIQUE,
+  result          TEXT,
+  created_at      INTEGER NOT NULL,
+  updated_at      INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_auth_sessions_address ON auth_sessions(address, expires_at DESC);
+CREATE INDEX IF NOT EXISTS idx_auth_nonces_address ON auth_nonces(address, expires_at DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_log_actor ON audit_log(actor, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_agent_sessions_grantor ON agent_sessions(grantor, expires_at DESC);
+CREATE INDEX IF NOT EXISTS idx_outbox_status ON outbox(status, created_at ASC);
 `;

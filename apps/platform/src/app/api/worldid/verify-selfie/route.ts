@@ -3,10 +3,16 @@ import {
   verifySelfieCredential,
   WorldProofError,
 } from "@/lib/worldid/verification";
+import { requireInvestor } from "@/lib/auth/middleware";
+import { checkRateLimit, getClientIp } from "@/lib/api/rateLimit";
+import { auditLog } from "@/lib/audit/logger";
 
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
+  checkRateLimit(getClientIp(request), 30);
+  const ctx = requireInvestor(request);
+
   try {
     const verification = await verifySelfieCredential(
       await request.json().catch(() => null)

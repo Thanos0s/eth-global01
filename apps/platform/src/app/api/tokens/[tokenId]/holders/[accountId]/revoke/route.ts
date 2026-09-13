@@ -5,14 +5,21 @@ import { freezeAccount, revokeKyc } from "@/lib/hedera/tokenService";
 import { cancelScheduledReclaim } from "@/lib/hedera/scheduleService";
 import { setEvmApproved, setEvmFrozen } from "@/lib/evm/client";
 
+import { requireOperator } from "@/lib/auth/middleware";
+import { checkRateLimit, getClientIp } from "@/lib/api/rateLimit";
+import { auditLog } from "@/lib/audit/logger";
+
 export const dynamic = "force-dynamic";
 
 /** Admin de-whitelists a holder: revokes KYC and/or (re-)freezes the account, and cancels any
  *  pending auto-reclaim schedule since it's superseded by this explicit action. */
 export async function POST(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ tokenId: string; accountId: string }> }
 ) {
+  checkRateLimit(getClientIp(req), 30);
+  const ctx = requireOperator(req);
+
   return handleRoute(async () => {
     const { tokenId, accountId } = await params;
     const token = requireToken(tokenId);

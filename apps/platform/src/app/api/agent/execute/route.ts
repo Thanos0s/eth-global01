@@ -1,18 +1,62 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "node:crypto";
 import {
-  validateSessionPolicy,
-  commitSessionSpend,
-  getActiveSession,
+  validateAndSpendSession,
+  getSessionById,
 } from "@/lib/hermes/sessionPolicy";
 import { logHcsAuditEvent } from "@/lib/hedera/hcsAudit";
+import { requireOperatorOrAgent } from "@/lib/auth/middleware";
+import { checkRateLimit, getClientIp } from "@/lib/api/rateLimit";
+import { auditLog } from "@/lib/audit/logger";
+import { isDemoMode, DEMO_BANNER } from "@/lib/demo";
+
+export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
+  checkRateLimit(getClientIp(req), 20);
+
+  // If in demo mode, return an isolated simulated pipeline response with explicit markings
+  if (isDemoMode()) {
+    return NextResponse.json({
+      success: true,
+      _demo: true,
+      _notice: DEMO_BANNER,
+      executionId: `demo_exec_${Date.now()}`,
+      agentId: "hermes-agentic-operator",
+      status: "SIMULATED",
+      steps: [
+        {
+          stepNumber: 1,
+          name: "Autonomous x402 Micropayment Settlement",
+          network: "Hedera Testnet (x402 Rail)",
+          status: "SIMULATED",
+          txId: null,
+          explorerUrl: null,
+          detail: `${DEMO_BANNER}: Micropayment simulated under local session.`,
+          timestamp: new Date().toISOString(),
+        },
+        {
+          stepNumber: 2,
+          name: "Hedera Consensus Service (HCS) Audit Anchor",
+          network: "Hedera Testnet (HCS Topic 0.0.4491823)",
+          status: "SIMULATED",
+          txId: null,
+          detail: `${DEMO_BANNER}: Consensus stamp simulated locally.`,
+          timestamp: new Date().toISOString(),
+        },
+      ],
+      completedAt: new Date().toISOString(),
+    });
+  }
+
+  // Production: Require operator or internal agent authorization
+  const authCtx = requireOperatorOrAgent(req);
+
   try {
     const body = await req.json();
     const {
-      sessionId = "session_prism8_genesis_demo",
-      action = "FULL_TOKENIZATION_AND_YIELD_PIPELINE",
+      sessionId,
+      action = "ORACLE_USPS_X402",
       property = {
         street: "456 Oak Avenue",
         city: "Miami",
@@ -22,12 +66,23 @@ export async function POST(req: NextRequest) {
         shares: 1000,
       },
       simulateMalicious = false,
+      requestNonce = crypto.randomUUID(),
     } = body;
 
-    // 1. Safety Guardrail Evaluation
+    if (!sessionId) {
+      return NextResponse.json({ error: "Missing required sessionId" }, { status: 400 });
+    }
+
+    // 1. Safety Guardrail Evaluation & Atomic Spend
     if (simulateMalicious) {
       const maliciousAction = "UNAUTHORIZED_TREASURY_TRANSFER";
-      const validation = validateSessionPolicy(sessionId, maliciousAction, 100.0, 50000);
+      const validation = validateAndSpendSession(
+        sessionId,
+        maliciousAction,
+        100.0,
+        50000,
+        requestNonce
+      );
       return NextResponse.json(
         {
           success: false,
@@ -44,12 +99,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Normal workflow check: requires 0.5 HBAR budget
-    const validation = validateSessionPolicy(
+    const validation = validateAndSpendSession(
       sessionId,
       "ORACLE_USPS_X402",
       0.5,
-      property.monthlyRent
+      property.monthlyRent,
+      requestNonce
     );
 
     if (!validation.allowed) {
@@ -63,13 +118,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 2. Execute Real Autonomous Economic Pipeline
+    const session = validation.session!;
     const executionId = `exec_${Date.now()}_${crypto.randomBytes(3).toString("hex")}`;
     const steps: any[] = [];
 
-    // Step A: Autonomous Hedera x402 Micropayment Settlement
-    let paymentTxId = `0.0.90-1789066142-110000595`;
-    let paymentExplorerUrl = `https://hashscan.io/testnet/transaction/${paymentTxId}`;
+    // Step A: x402 Micropayment verification via mirror node or live query
+    let paymentTxId: string | null = null;
+    let paymentExplorerUrl: string | null = null;
+
     try {
       const mirrorRes = await fetch(
         "https://testnet.mirrornode.hedera.com/api/v1/transactions?transactiontype=cryptotransfer&result=success&limit=1",
@@ -83,51 +139,45 @@ export async function POST(req: NextRequest) {
         }
       }
     } catch {
-      // Fallback to verified Hedera testnet transaction
+      // Pending
     }
 
     steps.push({
       stepNumber: 1,
       name: "Autonomous x402 Micropayment Settlement",
       network: "Hedera Testnet (x402 Rail)",
-      status: "CONFIRMED",
+      status: paymentTxId ? "CONFIRMED" : "PENDING_NETWORK_CONFIRMATION",
       txId: paymentTxId,
       explorerUrl: paymentExplorerUrl,
-      detail: "Settled 0.5 HBAR micropayment via Blocky402 facilitator under delegated Session Key allowance.",
+      detail: paymentTxId
+        ? "Settled 0.5 HBAR micropayment via Blocky402 facilitator under delegated Session Key allowance."
+        : "Settlement submitted to network; awaiting mirror node indexation.",
       timestamp: new Date().toISOString(),
     });
 
-    // Step B: Hedera Consensus Service (HCS) Verifiable Audit Logging
+    // Step B: Hedera Consensus Service (HCS) Audit Logging
     const addressHash = `0x${crypto.createHash("sha256").update(`${property.street}|${property.city}|${property.state}|${property.zip}`).digest("hex")}`;
-    let hcsTxId = `0.0.9932555-1789066184-689980359`;
-    let hcsExplorerUrl = `https://hashscan.io/testnet/transaction/${hcsTxId}`;
-    let seqNum = 65922;
-    try {
-      const mirrorRes = await fetch(
-        "https://testnet.mirrornode.hedera.com/api/v1/transactions?transactiontype=consensussubmitmessage&result=success&limit=1",
-        { cache: "no-store", signal: AbortSignal.timeout(3000) }
-      );
-      if (mirrorRes.ok) {
-        const mirrorData = await mirrorRes.json();
-        if (mirrorData.transactions?.[0]?.transaction_id) {
-          hcsTxId = mirrorData.transactions[0].transaction_id;
-          hcsExplorerUrl = `https://hashscan.io/testnet/transaction/${hcsTxId}`;
-          seqNum = Number(mirrorData.transactions[0].nonce || 65922);
-        }
-      }
-    } catch {
-      // Fallback
-    }
+    const hcsReceipt = await logHcsAuditEvent({
+      event: "ORACLE_USPS_VERIFIED",
+      propertyId: "0.0.4491823",
+      amount: "0.5 HBAR",
+      txId: paymentTxId || `pending_${Date.now()}`,
+      metadata: {
+        addressHash,
+        dpvConfirmation: "Y",
+        sessionGrantor: session.grantor,
+      },
+    });
 
     steps.push({
       stepNumber: 2,
       name: "Hedera Consensus Service (HCS) Audit Anchor",
       network: "Hedera Testnet (HCS Topic 0.0.4491823)",
       status: "IMMUTABLE_LOGGED",
-      txId: hcsTxId,
-      sequenceNumber: seqNum,
-      explorerUrl: hcsExplorerUrl,
-      detail: `Consensus sequence #${seqNum} anchored on HCS Topic 0.0.4491823.`,
+      txId: hcsReceipt.txId || null,
+      sequenceNumber: hcsReceipt.sequenceNumber,
+      explorerUrl: hcsReceipt.hashscanUrl || null,
+      detail: `Consensus sequence #${hcsReceipt.sequenceNumber} anchored on HCS Topic 0.0.4491823.`,
       timestamp: new Date().toISOString(),
     });
 
@@ -144,10 +194,11 @@ export async function POST(req: NextRequest) {
     });
 
     // Step D: Superfluid CFA Per-Second Yield Stream Creation
-    let baseSepoliaTxHash = "0x1e0d77de7d53b824bd0d925cc768efc21bff74cfc51f8ced8f45298fc337f4f2";
-    let baseSepoliaExplorerUrl = `https://sepolia.basescan.org/address/0xcfA132E353cB4E398080B9700609bb008eceB125#internaltx`;
+    let baseSepoliaTxHash: string | null = null;
+    let baseSepoliaExplorerUrl: string | null = null;
+
     try {
-      const rpcRes = await fetch("https://sepolia.base.org", {
+      const rpcRes = await fetch(process.env.SEPOLIA_RPC_URL ?? "https://sepolia.base.org", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -166,22 +217,19 @@ export async function POST(req: NextRequest) {
         }
       }
     } catch {
-      // Fallback
+      // Pending
     }
 
     steps.push({
       stepNumber: 4,
       name: "Superfluid CFA Per-Second Yield Stream Creation",
       network: "Base Sepolia (Superfluid CFA)",
-      status: "STREAMING_ACTIVE",
+      status: baseSepoliaTxHash ? "STREAMING_ACTIVE" : "PENDING_RPC_SETTLEMENT",
       txId: baseSepoliaTxHash,
       explorerUrl: baseSepoliaExplorerUrl,
       detail: `CFA Stream active: +$${((property.monthlyRent * 0.1) / 2592000).toFixed(8)}/sec into investor wallet.`,
       timestamp: new Date().toISOString(),
     });
-
-    // Commit spend to session
-    const updatedSession = commitSessionSpend(sessionId, 0.5, true);
 
     // Persist event into database audit ledger
     try {
@@ -204,6 +252,16 @@ export async function POST(req: NextRequest) {
       console.warn("[agent execute] Could not record event in sqlite:", e);
     }
 
+    auditLog({
+      actor: authCtx.address,
+      role: authCtx.role,
+      action: "EXECUTE_AGENT_MISSION",
+      resource: `session:${sessionId}`,
+      status: "OK",
+      detail: { executionId, spendHbar: 0.5 },
+      ip: getClientIp(req),
+    });
+
     return NextResponse.json({
       success: true,
       executionId,
@@ -216,16 +274,16 @@ export async function POST(req: NextRequest) {
       },
       sessionProof: {
         standard: "ERC-7579 Modular Account Abstraction",
-        validatorModule: updatedSession.validatorContract,
-        signatureType: updatedSession.signatureType,
-        grantor: updatedSession.grantor,
-        agent: updatedSession.agentAddress,
-        delegatedBudget: `${updatedSession.constraints.maxSpendHbar} HBAR`,
-        spentBudget: `${updatedSession.spentHbar} HBAR`,
-        remainingBudget: `${Math.max(0, updatedSession.constraints.maxSpendHbar - updatedSession.spentHbar).toFixed(2)} HBAR`,
-        expiresAt: new Date(updatedSession.expiresAt).toISOString(),
+        validatorModule: session.validatorContract,
+        signatureType: session.signatureType,
+        grantor: session.grantor,
+        agent: session.agentAddress,
+        delegatedBudget: `${session.constraints.maxSpendHbar} HBAR`,
+        spentBudget: `${session.spentHbar} HBAR`,
+        remainingBudget: `${Math.max(0, session.constraints.maxSpendHbar - session.spentHbar).toFixed(2)} HBAR`,
+        expiresAt: new Date(session.expiresAt).toISOString(),
       },
-      sessionRemainingHbar: Math.max(0, updatedSession.constraints.maxSpendHbar - updatedSession.spentHbar),
+      sessionRemainingHbar: Math.max(0, session.constraints.maxSpendHbar - session.spentHbar),
       steps,
       completedAt: new Date().toISOString(),
     });

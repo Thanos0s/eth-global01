@@ -4,6 +4,10 @@ import { insertEvent, insertToken, listTokens } from "@/lib/db/repo";
 import { createEvmTokenSchema } from "@/lib/validation";
 import { deployEvmToken, getEvmOperatorAddress } from "@/lib/evm/client";
 
+import { requireOperator } from "@/lib/auth/middleware";
+import { checkRateLimit, getClientIp } from "@/lib/api/rateLimit";
+import { auditLog } from "@/lib/audit/logger";
+
 export const dynamic = "force-dynamic";
 
 export async function GET() {
@@ -13,6 +17,9 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
+  checkRateLimit(getClientIp(req), 30);
+  const ctx = requireOperator(req);
+
   return handleRoute(async () => {
     const body = await readJson<Record<string, unknown>>(req);
     const input = createEvmTokenSchema.parse({ ...body, blockchain: "EVM" });
@@ -89,7 +96,7 @@ export async function POST(req: Request) {
       hashscanUrl: explorerUrl,
     });
 
-    // Ensure initial treasury and investor holders exist
+    // Ensure initial treasury holder exists
     try {
       const { ensureHolder, updateHolder } = await import("@/lib/db/repo");
       ensureHolder(token.id, treasuryAccountId, treasuryAccountId);
@@ -98,16 +105,19 @@ export async function POST(req: Request) {
         kycGranted: true,
         status: "WHITELISTED",
       });
-      const demoInvestor = "0x28a8746e75304c0780e011bed21c72cd78cd535e";
-      ensureHolder(token.id, demoInvestor, demoInvestor);
-      updateHolder(token.id, demoInvestor, {
-        associated: true,
-        kycGranted: true,
-        status: "WHITELISTED",
-      });
     } catch (holderErr) {
-      console.warn("Could not insert initial holders:", holderErr);
+      console.warn("Could not insert initial treasury holder:", holderErr);
     }
+
+    auditLog({
+      actor: ctx.address,
+      role: ctx.role,
+      action: "CREATE_EVM_TOKEN",
+      resource: `token:${token.id}`,
+      status: "OK",
+      detail: { name: token.name, symbol: token.symbol },
+      ip: getClientIp(req),
+    });
 
     return NextResponse.json({ token }, { status: 201 });
   });

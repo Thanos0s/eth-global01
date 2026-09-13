@@ -8,6 +8,11 @@ import {
   VALIDATOR_CONTRACT_ADDRESS,
   HERMES_AGENT_ADDRESS,
 } from "@/lib/hermes/sessionPolicy";
+import { requireInvestor } from "@/lib/auth/middleware";
+import { checkRateLimit, getClientIp } from "@/lib/api/rateLimit";
+import { auditLog } from "@/lib/audit/logger";
+
+export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   const grantor = req.nextUrl.searchParams.get("grantor") || undefined;
@@ -25,14 +30,16 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  checkRateLimit(getClientIp(req), 30);
+
   try {
     const body = await req.json();
-    const { grantor, signature, constraints, nonce, rawMessage } = body as {
+    const { grantor, signature, constraints, nonce, chainId } = body as {
       grantor: string;
       signature: string;
       constraints?: Partial<SessionPolicyConstraints>;
       nonce?: number;
-      rawMessage?: string;
+      chainId?: number;
     };
 
     if (!grantor || !signature) {
@@ -42,13 +49,27 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Authenticated investor check (user must match grantor or be operator)
+    const ctx = requireInvestor(req, grantor);
+
+    const policyNonce = nonce ?? Date.now();
     const session = createSessionGrant(
       grantor,
       signature,
       constraints,
-      nonce ?? Date.now(),
-      rawMessage
+      policyNonce,
+      chainId
     );
+
+    auditLog({
+      actor: ctx.address,
+      role: ctx.role,
+      action: "REGISTER_AGENT_SESSION",
+      resource: `session:${session.sessionId}`,
+      status: "OK",
+      detail: { grantor, maxSpendHbar: session.constraints.maxSpendHbar, nonce: policyNonce },
+      ip: getClientIp(req),
+    });
 
     return NextResponse.json({
       success: true,
@@ -59,7 +80,7 @@ export async function POST(req: NextRequest) {
   } catch (err: any) {
     return NextResponse.json(
       { error: err.message || "Failed to create agent session" },
-      { status: 500 }
+      { status: err.status || 400 }
     );
   }
 }
