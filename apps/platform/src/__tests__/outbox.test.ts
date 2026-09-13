@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import {
   enqueueChainWrite,
   markOutboxDone,
@@ -62,12 +62,22 @@ describe("Durable Outbox Queue Pattern", () => {
   });
 
   it("exposes database dialect and latency in /api/health endpoint", async () => {
-    const { GET } = await import("@/app/api/health/route");
-    const res = await GET();
-    const data = await res.json();
-    expect(data.checks.database).toBe("ok");
-    expect(data.database).toBeDefined();
-    expect(data.database.dialect).toBe("sqlite");
-    expect(data.database.latencyMs).toBeGreaterThanOrEqual(0);
+    const originalFetch = global.fetch;
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ result: "84532" }),
+    } as Response);
+
+    try {
+      const { GET } = await import("@/app/api/health/route");
+      const res = await GET();
+      const data = await res.json();
+      expect(data.checks.database).toBe("ok");
+      expect(data.database).toBeDefined();
+      expect(data.database.dialect).toBe("sqlite");
+      expect(data.database.latencyMs).toBeGreaterThanOrEqual(0);
+    } finally {
+      global.fetch = originalFetch;
+    }
   });
 });
