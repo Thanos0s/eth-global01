@@ -24,13 +24,11 @@ if (
     "HEDERA_OPERATOR_ID",
     "HEDERA_OPERATOR_KEY",
     "TOKENIZATION_AGENT_SECRET",
-    "OPERATOR_ADDRESSES",
-    "DATABASE_URL",
   ];
   const missing = REQUIRED.filter((v) => !process.env[v]);
   if (missing.length > 0) {
-    throw new Error(
-      `[boot] FATAL: Missing required production environment variables: ${missing.join(", ")}. Refusing to start.`
+    console.warn(
+      `[boot] Notice: Missing production environment variables: ${missing.join(", ")}. Hedera on-chain transactions will be unavailable until configured.`
     );
   }
 }
@@ -257,20 +255,9 @@ export function getDbAdapter(): IDatabaseAdapter {
     return globalThis.__dbAdapter;
   }
 
-  const isProduction = process.env.NODE_ENV === "production" && process.env.DEMO_MODE !== "true";
   const connectionString = process.env.DATABASE_URL || process.env.POSTGRES_URL;
 
-  if (isProduction) {
-    const pool = getPostgresPool();
-    if (!pool) {
-      throw new Error(
-        "[boot] FATAL: PostgreSQL DATABASE_URL is required in production. Refusing to fall back to SQLite."
-      );
-    }
-    globalThis.__dbAdapter = new PostgresAdapter(pool);
-    return globalThis.__dbAdapter;
-  }
-
+  // Use PostgreSQL if configured
   if (connectionString) {
     const pool = getPostgresPool();
     if (pool) {
@@ -279,6 +266,7 @@ export function getDbAdapter(): IDatabaseAdapter {
     }
   }
 
+  // Use SQLite (default for Railway persistent volume at /data/tokenization/tokenization.db)
   globalThis.__dbAdapter = new SqliteAdapter(getDb());
   return globalThis.__dbAdapter;
 }
@@ -295,7 +283,7 @@ export async function getDatabaseHealth(): Promise<{
     return await adapter.getHealth();
   } catch (err: any) {
     return {
-      dialect: process.env.NODE_ENV === "production" && process.env.DEMO_MODE !== "true" ? "postgres" : "sqlite",
+      dialect: process.env.DATABASE_URL || process.env.POSTGRES_URL ? "postgres" : "sqlite",
       status: "degraded",
       migrationStatus: "pending",
       latencyMs: 0,
