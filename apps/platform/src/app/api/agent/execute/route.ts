@@ -13,7 +13,7 @@ import { requireOperatorOrAgent } from "@/lib/auth/middleware";
 import { checkRateLimit, getClientIp } from "@/lib/api/rateLimit";
 import { auditLog } from "@/lib/audit/logger";
 import { isDemoMode, DEMO_BANNER } from "@/lib/demo";
-import { getLiveShareholderAllocation } from "@/lib/subgraph/subgraphService";
+import { getLiveShareholderAllocation, SubgraphAllocationResult } from "@/lib/subgraph/subgraphService";
 import { executeHederaSettlement } from "@/lib/x402/settlementVerifier";
 
 export const dynamic = "force-dynamic";
