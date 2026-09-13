@@ -222,9 +222,16 @@ CREATE TABLE IF NOT EXISTS outbox (
   updated_at      INTEGER NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS agent_request_nonces (
+  nonce       TEXT PRIMARY KEY,
+  expires_at  INTEGER NOT NULL,
+  consumed_at INTEGER NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS idx_auth_sessions_address ON auth_sessions(address, expires_at DESC);
 CREATE INDEX IF NOT EXISTS idx_auth_nonces_address ON auth_nonces(address, expires_at DESC);
 CREATE INDEX IF NOT EXISTS idx_audit_log_actor ON audit_log(actor, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_agent_sessions_grantor ON agent_sessions(grantor, expires_at DESC);
 CREATE INDEX IF NOT EXISTS idx_outbox_status ON outbox(status, created_at ASC);
+CREATE INDEX IF NOT EXISTS idx_agent_request_nonces_expires ON agent_request_nonces(expires_at);
 `;

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { listTokens, listHolders, listEvents } from "@/lib/db/repo";
+import { isDemoMode } from "@/lib/demo";
 
 export const dynamic = "force-dynamic";
 
@@ -22,15 +23,17 @@ function getDynamicSubgraphData(targetTokenId?: string) {
     ? dbTokens.find((t) => t.id.toLowerCase() === targetTokenId.toLowerCase()) || dbTokens[0]
     : dbTokens[0];
 
-  const tokenId = activeToken?.id || "0.0.4491823";
+  const tokenId = activeToken?.id || (isDemoMode() ? "0.0.4491823" : "");
   let holders: any[] = [];
   let events: any[] = [];
-  try {
-    holders = listHolders(tokenId);
-    events = listEvents(tokenId);
-  } catch {
-    holders = [];
-    events = [];
+  if (tokenId) {
+    try {
+      holders = listHolders(tokenId);
+      events = listEvents(tokenId);
+    } catch {
+      holders = [];
+      events = [];
+    }
   }
 
   const monthlyRent = 3800;
@@ -52,7 +55,8 @@ function getDynamicSubgraphData(targetTokenId?: string) {
             receivedCount: "3",
           };
         })
-      : [
+      : isDemoMode()
+      ? [
           {
             address: "0x742d35cc6634c0532925a3b844bc454e4438f44e",
             token: { id: tokenId, symbol: activeToken?.symbol || "OAK456" },
@@ -73,15 +77,16 @@ function getDynamicSubgraphData(targetTokenId?: string) {
             sentCount: "1",
             receivedCount: "2",
           },
-        ];
+        ]
+      : [];
 
   const formattedTokens = dbTokens.map((t) => ({
     id: t.id,
     name: t.name,
     symbol: t.symbol,
     decimals: t.decimals,
-    transferCount: String(events.length || 14),
-    totalHolders: holders.length || 4,
+    transferCount: String(events.length || (isDemoMode() ? 14 : 0)),
+    totalHolders: holders.length || (isDemoMode() ? 4 : 0),
   }));
 
   const formattedTransfers =
@@ -96,10 +101,10 @@ function getDynamicSubgraphData(targetTokenId?: string) {
           isMintOrBurn: e.type === "CREATE_TOKEN" || e.type === "TOKEN_MINTED",
           blockNumber: String(11350480 + idx),
           blockTimestamp: Math.floor(new Date(e.createdAt).getTime() / 1000),
-          transactionHash:
-            e.txId || "0x4e8d35a9f2421319c5225c5f49ef2ff445a5dbe4223403a4bcf3c95977ba2f9a",
+          transactionHash: e.txId || null,
         }))
-      : [
+      : isDemoMode()
+      ? [
           {
             id: "0xabc123-1",
             token: { id: tokenId, symbol: activeToken?.symbol || "OAK456" },
@@ -112,10 +117,11 @@ function getDynamicSubgraphData(targetTokenId?: string) {
             blockTimestamp: Math.floor(Date.now() / 1000) - 3600 * 24,
             transactionHash: "0x4e8d35a9f2421319c5225c5f49ef2ff445a5dbe4223403a4bcf3c95977ba2f9a",
           },
-        ];
+        ]
+      : [];
 
   return {
-    tokens: formattedTokens.length > 0 ? formattedTokens : [
+    tokens: formattedTokens.length > 0 ? formattedTokens : isDemoMode() ? [
       {
         id: "0.0.4491823",
         name: "456 Oak Avenue Luxury Residences",
@@ -124,11 +130,11 @@ function getDynamicSubgraphData(targetTokenId?: string) {
         transferCount: "24",
         totalHolders: 4,
       },
-    ],
+    ] : [],
     holders: formattedHolders,
     recentTransfers: formattedTransfers,
     meta: {
-      deployment: "QmQ65v4hUvG1K3T6q21bL5f9N4d9zXJ8pD32A1f6K9z1ab",
+      deployment: isDemoMode() ? "QmQ65v4hUvG1K3T6q21bL5f9N4d9zXJ8pD32A1f6K9z1ab" : "production",
       subgraphName: "liquiditystream-rwa",
       network: "sepolia",
       block: {
@@ -150,9 +156,11 @@ export async function GET() {
     status: "ok",
     subgraphUrl:
       subgraphUrl ||
-      "https://api.studio.thegraph.com/query/example/liquiditystream-rwa/version/latest",
+      (isDemoMode()
+        ? "https://api.studio.thegraph.com/query/example/liquiditystream-rwa/version/latest"
+        : null),
     isLive,
-    mode: isLive ? "live-studio" : "demonstration-mode",
+    mode: isLive ? "live-studio" : isDemoMode() ? "demonstration-mode" : "unconfigured",
     meta: dynamicData.meta,
     schemaEntities: ["Token", "Account", "Transfer"],
     mcpTools: {

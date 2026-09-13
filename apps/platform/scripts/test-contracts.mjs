@@ -52,7 +52,7 @@ async function runTests() {
   assert(vaultInterface.getFunction("depositRent"), "depositRent function must exist");
   assert(vaultInterface.getFunction("createInvestorStream"), "createInvestorStream function must exist");
   assert(vaultInterface.getFunction("deleteInvestorStream"), "deleteInvestorStream function must exist");
-  assert(vaultInterface.getFunction("emergencyFreezeAll"), "emergencyFreezeAll function must exist");
+  assert(vaultInterface.getFunction("emergencyFreezeBatch"), "emergencyFreezeBatch function must exist");
   assert(vaultInterface.getFunction("calculateFlowRate"), "calculateFlowRate function must exist");
   console.log("✓ Test 3 Passed: YieldVault ABI signatures verified.");
 

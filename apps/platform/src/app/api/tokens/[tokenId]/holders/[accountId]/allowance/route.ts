@@ -6,6 +6,8 @@ import { allowanceReceiptSchema } from "@/lib/validation";
 import { waitForTokenAllowance } from "@/lib/hedera/mirrorNode";
 import { getEvmAllowance } from "@/lib/evm/client";
 import { transactionExplorerUrl } from "@/lib/chains";
+import { requireInvestor } from "@/lib/auth/middleware";
+import { checkRateLimit, getClientIp } from "@/lib/api/rateLimit";
 
 export const dynamic = "force-dynamic";
 
@@ -15,8 +17,11 @@ export async function POST(
   req: Request,
   { params }: { params: Promise<{ tokenId: string; accountId: string }> }
 ) {
+  checkRateLimit(getClientIp(req), 30);
+
   return handleRoute(async () => {
     const { tokenId, accountId } = await params;
+    requireInvestor(req, accountId);
     const token = requireToken(tokenId);
     if (!token.compliance.livenessEnabled) {
       throw new ApiError("This token does not use recurring liveness.", 409);

@@ -1,24 +1,17 @@
-﻿import { NextResponse } from "next/server";
-import { getDb } from "@/lib/db/index";
+import { NextResponse } from "next/server";
+import { getDatabaseHealth } from "@/lib/db/index";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
+  const dbHealth = await getDatabaseHealth();
   const checks: Record<string, "ok" | "degraded"> = {
-    database: "degraded",
+    database: dbHealth.status,
     hederaMirror: "degraded",
     evmRpc: "degraded",
   };
 
-  // 1. Database Check
-  try {
-    getDb().prepare("SELECT 1").get();
-    checks.database = "ok";
-  } catch {
-    checks.database = "degraded";
-  }
-
-  // 2. Hedera Mirror Node Check
+  // 1. Hedera Mirror Node Check
   try {
     const res = await fetch(
       "https://testnet.mirrornode.hedera.com/api/v1/network/nodes?limit=1",
@@ -34,7 +27,7 @@ export async function GET() {
     checks.hederaMirror = "degraded";
   }
 
-  // 3. EVM RPC Check
+  // 2. EVM RPC Check
   try {
     const rpcUrl = process.env.SEPOLIA_RPC_URL || "https://sepolia.base.org";
     const res = await fetch(rpcUrl, {
@@ -63,6 +56,11 @@ export async function GET() {
       status: allHealthy ? "ok" : "degraded",
       timestamp: new Date().toISOString(),
       checks,
+      database: {
+        dialect: dbHealth.dialect,
+        latencyMs: dbHealth.latencyMs,
+        error: dbHealth.error,
+      },
       environment: process.env.NODE_ENV ?? "development",
       demoMode: process.env.DEMO_MODE === "true",
     },

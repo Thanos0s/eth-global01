@@ -73,7 +73,7 @@ if (existsSync(routePath)) {
   const routeContent = readFileSync(routePath, "utf-8");
   assert(routeContent.includes("export async function GET"), "route.ts exports GET handler");
   assert(routeContent.includes("export async function POST"), "route.ts exports POST handler");
-  assert(routeContent.includes("DEMO_SUBGRAPH_DATA"), "route.ts provides reliable demo fallback data");
+  assert(routeContent.includes("getDynamicSubgraphData"), "route.ts provides dynamic subgraph data handler");
 }
 
 // 4. Verify TheGraphInspectorModal Component

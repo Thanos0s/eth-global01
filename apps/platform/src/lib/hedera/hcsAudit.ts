@@ -6,6 +6,7 @@ import {
 } from "@hiero-ledger/sdk";
 import { getOperatorClient, getOperatorId } from "./client";
 import { hashscanTxUrl } from "./format";
+import { isDemoMode } from "@/lib/demo";
 
 export interface HcsAuditEventPayload {
   event: string;
@@ -87,7 +88,12 @@ export async function logHcsAuditEvent(payload: HcsAuditEventPayload): Promise<H
       event: payload.event,
     };
   } catch (error) {
-    // Fallback deterministic receipt for simulated test environments
+    if (!isDemoMode()) {
+      throw new Error(
+        `Hedera HCS audit logging failed on live network: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
+    // Fallback deterministic receipt strictly for simulated demo/offline test environments
     const mockSeq = Math.floor(Date.now() / 1000) % 100000;
     const mockTxId = payload.txId ?? `0.0.4491823@${Math.floor(Date.now() / 1000)}.000000000`;
     return {

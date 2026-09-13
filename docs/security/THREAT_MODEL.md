@@ -1,4 +1,4 @@
-﻿# Prism 8 Threat Model (STRIDE Methodology)
+# Prism 8 Threat Model (STRIDE Methodology)
 
 ## 1. Scope & Objective
 This document assesses security threats to Prism 8 across its web platform, smart contracts, cryptographic session delegation, and off-chain execution agents.
@@ -17,6 +17,12 @@ This document assesses security threats to Prism 8 across its web platform, smar
 * **Threat S3: User specifies arbitrary investor recipient on yield claims.**
   * *Impact*: An investor claims yield intended for another wallet.
   * *Mitigation*: `/api/yield/claim` ignores any client-supplied `accountId`. The payout recipient is derived strictly from the authenticated session context (`ctx.address`).
+* **Threat S4: Investor registers, requests tokens, or modifies allowance/verification on behalf of another wallet.**
+  * *Impact*: Unauthorized modification of another investor's holder record, token requests, or allowance state.
+  * *Mitigation*: All holder endpoints (`/holders`, `/requests`, `/allowance`, `/worldid-verify`, `/worldid-retry`) call `requireInvestor(req, accountId)`. For investors, the account is derived from or strictly matched against `ctx.address`. Cross-account mutations are rejected with `403 Forbidden`.
+* **Threat S5: Replay of internal agent HTTP requests.**
+  * *Impact*: An attacker intercepting an internal agent webhook or MCP request attempts to replay execution.
+  * *Mitigation*: `requireAgentRequest` stores one-time request nonces into `agent_request_nonces` with a unique constraint and TTL. Replayed nonces are rejected with `409 Conflict`. Timestamps outside ±120s are rejected with `401 Unauthorized`.
 
 ### 2.2 Tampering (Data Integrity)
 * **Threat T1: Client supplies fabricated on-chain transaction IDs or compliance states.**
@@ -60,3 +66,7 @@ This document assesses security threats to Prism 8 across its web platform, smar
 * **Threat E2: Replay of spent EIP-712 session allowances.**
   * *Impact*: Agent draining more funds than authorized by the user.
   * *Mitigation*: Per-grantor policy nonces (`UNIQUE(grantor, nonce)`) and per-request UUID tracking in `agent_nonces` executed atomically inside database transactions.
+* **Threat E3: Rogue agent bypassing session policy constraints directly on-chain.**
+  * *Impact*: Agent invokes unauthorized contracts or function selectors, drains value, or executes past expiration.
+  * *Mitigation*: `SessionKeyValidator.sol` implements strict ERC-7579/ERC-4337 validation in `validateUserOp`. It decodes `callData`, verifies target against `allowedTargets`, verifies function selector against `allowedSelectors`, recovers agent signature over `userOpHash`, verifies grantor EIP-712 signature over the policy, checks chain ID and expiration, and tracks cumulative spend per policy nonce directly on-chain (`policySpend`).
+

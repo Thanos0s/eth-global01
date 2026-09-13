@@ -1113,10 +1113,39 @@ export function consumeAuthNonce(nonce: string, address: string): boolean {
     .prepare(
       "SELECT consumed, expires_at as expiresAt, address FROM auth_nonces WHERE nonce = ?"
     )
-    .get(nonce) as any;
+    .get(nonce) as { consumed: number; expiresAt: number; address: string } | undefined;
   if (!row || row.consumed || row.expiresAt < Date.now() || row.address !== address.toLowerCase()) {
     return false;
   }
   getDb().prepare("UPDATE auth_nonces SET consumed = 1 WHERE nonce = ?").run(nonce);
   return true;
 }
+
+// --- Agent Request Nonces (HMAC replay prevention) ---
+
+export function purgeExpiredAgentRequestNonces(now = Date.now()): number {
+  try {
+    const res = getDb()
+      .prepare("DELETE FROM agent_request_nonces WHERE expires_at < ?")
+      .run(now);
+    return res.changes;
+  } catch {
+    return 0;
+  }
+}
+
+export function consumeAgentRequestNonce(nonce: string, expiresAt: number): boolean {
+  purgeExpiredAgentRequestNonces();
+  try {
+    const res = getDb()
+      .prepare(
+        "INSERT INTO agent_request_nonces (nonce, expires_at, consumed_at) VALUES (?, ?, ?)"
+      )
+      .run(nonce, expiresAt, Date.now());
+    return res.changes > 0;
+  } catch {
+    // Unique constraint collision on primary key 'nonce' indicates replay attack
+    return false;
+  }
+}
+

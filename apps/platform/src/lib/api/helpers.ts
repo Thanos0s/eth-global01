@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { ZodError } from "zod";
-import { getToken } from "@/lib/db/repo";
+import { getToken, consumeAgentRequestNonce } from "@/lib/db/repo";
 import type { TokenRecord } from "@/types";
 
 export class ApiError extends Error {
@@ -36,26 +36,33 @@ export function requireAgentRequest(req: Request): void {
     throw new ApiError("Unauthorized agent request: secret mismatch", 401);
   }
 
-  // Enhanced HMAC signature and timestamp verification
+  // Enhanced HMAC signature, timestamp, and durable one-time nonce verification
   const ts = req.headers.get("x-agent-timestamp");
   const nonce = req.headers.get("x-agent-nonce");
   const hmac = req.headers.get("x-agent-hmac");
 
-  if (ts && nonce && hmac) {
-    const tsNum = Number(ts);
-    if (!Number.isSafeInteger(tsNum) || Math.abs(Date.now() - tsNum) > 120_000) {
-      throw new ApiError("Agent request timestamp expired or outside allowed ±120s window", 401);
-    }
-    const expectedHmac = createHmac("sha256", expected)
-      .update(`${received}:${ts}:${nonce}`)
-      .digest("hex");
-    const hmacBuf = Buffer.from(hmac);
-    const expHmacBuf = Buffer.from(expectedHmac);
-    if (hmacBuf.length !== expHmacBuf.length || !timingSafeEqual(hmacBuf, expHmacBuf)) {
-      throw new ApiError("Agent request HMAC verification failed", 401);
-    }
-  } else if (process.env.NODE_ENV === "production" && process.env.DEMO_MODE !== "true") {
+  if (!ts || !nonce || !hmac) {
     throw new ApiError("Missing required agent HMAC, timestamp, or nonce headers", 401);
+  }
+
+  const tsNum = Number(ts);
+  if (!Number.isSafeInteger(tsNum) || Math.abs(Date.now() - tsNum) > 120_000) {
+    throw new ApiError("Agent request timestamp expired or outside allowed ±120s window", 401);
+  }
+
+  const expectedHmac = createHmac("sha256", expected)
+    .update(`${received}:${ts}:${nonce}`)
+    .digest("hex");
+  const hmacBuf = Buffer.from(hmac);
+  const expHmacBuf = Buffer.from(expectedHmac);
+  if (hmacBuf.length !== expHmacBuf.length || !timingSafeEqual(hmacBuf, expHmacBuf)) {
+    throw new ApiError("Agent request HMAC verification failed", 401);
+  }
+
+  // Durable Nonce Consumption: atomically store nonce with TTL; reject reuse with 409
+  const consumed = consumeAgentRequestNonce(nonce, tsNum + 120_000);
+  if (!consumed) {
+    throw new ApiError("Agent request nonce already consumed (replay rejected)", 409);
   }
 }
 
