@@ -9,10 +9,10 @@ export default defineConfig({
     exclude: ["src/__tests__/erc7579Execution.test.ts", "**/node_modules/**"],
     testTimeout: 15000,
     fileParallelism: false,
-    pool: "forks",
+    pool: "threads",
     poolOptions: {
-      forks: {
-        singleFork: true,
+      threads: {
+        singleThread: true,
       },
     },
     env: {
