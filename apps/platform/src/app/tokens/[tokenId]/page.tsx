@@ -6,12 +6,12 @@ export const dynamic = "force-dynamic";
 
 export default async function TokenDetailPage({ params }: { params: Promise<{ tokenId: string }> }) {
   const { tokenId } = await params;
-  const token = getToken(tokenId);
+  const token = await getToken(tokenId);
   if (!token) notFound();
 
-  const holders = listHolders(tokenId);
-  const events = listEvents(tokenId);
-  const requests = listTokenRequestsForToken(tokenId);
+  const holders = await listHolders(tokenId);
+  const events = await listEvents(tokenId);
+  const requests = await listTokenRequestsForToken(tokenId);
   // Bracket access keeps this value runtime-configurable in the standalone Railway image;
   // direct NEXT_PUBLIC_* access would be frozen into the client bundle during Docker build.
   const appId = process.env.WORLD_APP_ID ?? process.env["NEXT_PUBLIC_WORLD_APP_ID"] ?? "";

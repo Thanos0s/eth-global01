@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
  * or amount; every expired candidate and live balance is resolved server-side. */
 export async function POST(req: Request) {
   return handleRoute(async () => {
-    requireAgentRequest(req);
+    await requireAgentRequest(req);
     const results = await processExpiredLiveness();
     return NextResponse.json({ processed: results.length, results });
   });

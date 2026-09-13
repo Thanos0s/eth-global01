@@ -29,13 +29,17 @@ async function getRuntimeConfig(): Promise<RuntimeConfig> {
 }
 
 function ledgerIdFor(network: string): LedgerId {
-  if (network === "mainnet") return LedgerId.MAINNET;
+  if (network === "mainnet") {
+    throw new Error("Mainnet is rejected in testnet-only mode.");
+  }
   if (network === "previewnet") return LedgerId.PREVIEWNET;
   return LedgerId.TESTNET;
 }
 
 function chainIdFor(network: string): HederaChainId {
-  if (network === "mainnet") return HederaChainId.Mainnet;
+  if (network === "mainnet") {
+    throw new Error("Mainnet is rejected in testnet-only mode.");
+  }
   if (network === "previewnet") return HederaChainId.Previewnet;
   return HederaChainId.Testnet;
 }

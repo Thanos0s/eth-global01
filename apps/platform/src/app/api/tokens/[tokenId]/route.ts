@@ -7,9 +7,9 @@ export const dynamic = "force-dynamic";
 export async function GET(_req: Request, { params }: { params: Promise<{ tokenId: string }> }) {
   return handleRoute(async () => {
     const { tokenId } = await params;
-    const token = requireToken(tokenId);
-    const holders = listHolders(tokenId);
-    const events = listEvents(tokenId);
+    const token = await requireToken(tokenId);
+    const holders = await listHolders(tokenId);
+    const events = await listEvents(tokenId);
     return NextResponse.json({ token, holders, events });
   });
 }

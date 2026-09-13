@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Production: Authenticate investor; recipient is strictly derived from session context
-  const ctx = requireInvestor(req);
+  const ctx = await requireInvestor(req);
   const accountId = ctx.address;
 
   try {
@@ -41,7 +41,6 @@ export async function POST(req: NextRequest) {
       event: "RENTAL_YIELD_CLAIMED",
       propertyId,
       amount: `$${claimAmount.toFixed(4)} USD`,
-      txId: `0.0.4491823@${Math.floor(Date.now() / 1000)}`,
       payer: accountId,
       metadata: {
         receiver: accountId,

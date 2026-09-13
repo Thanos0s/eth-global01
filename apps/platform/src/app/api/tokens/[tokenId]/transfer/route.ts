@@ -16,14 +16,14 @@ export const dynamic = "force-dynamic";
  *  even if our DB state is stale. */
 export async function POST(req: Request, { params }: { params: Promise<{ tokenId: string }> }) {
   checkRateLimit(getClientIp(req), 30);
-  const ctx = requireOperatorOrAgent(req);
+  const ctx = await requireOperatorOrAgent(req);
 
   return handleRoute(async () => {
     const { tokenId } = await params;
-    const token = requireToken(tokenId);
+    const token = await requireToken(tokenId);
 
     const { accountId, amount } = transferSchema.parse(await readJson<unknown>(req));
-    const holder = getHolder(tokenId, accountId);
+    const holder = await getHolder(tokenId, accountId);
     if (!holder || holder.status !== "WHITELISTED") {
       throw new ApiError(
         "Holder is not marked WHITELISTED in this app yet. Approve their KYC/whitelist request first (the network will still reject the transfer if they aren't actually compliant on-chain).",
@@ -34,7 +34,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ tokenId
     const result = token.blockchain === "EVM"
       ? await transferEvmFromTreasury(tokenId, accountId, amount)
       : await transferFromTreasury(tokenId, accountId, amount);
-    insertEvent({
+    await insertEvent({
       tokenId,
       accountId,
       type: "TRANSFER",

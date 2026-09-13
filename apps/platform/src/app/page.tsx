@@ -4,10 +4,10 @@ import type { TokenRecord } from "@/types";
 
 export const dynamic = "force-dynamic";
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
   let tokens: TokenRecord[] = [];
   try {
-    tokens = listTokens();
+    tokens = await listTokens();
   } catch (err) {
     console.error("[DashboardPage] listTokens error:", err);
     tokens = [];

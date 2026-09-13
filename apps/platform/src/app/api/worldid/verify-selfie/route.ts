@@ -11,7 +11,7 @@ export const runtime = "nodejs";
 
 export async function POST(request: Request) {
   checkRateLimit(getClientIp(request), 30);
-  const ctx = requireInvestor(request);
+  const ctx = await requireInvestor(request);
 
   try {
     const verification = await verifySelfieCredential(

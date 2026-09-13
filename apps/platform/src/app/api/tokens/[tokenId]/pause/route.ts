@@ -13,11 +13,11 @@ export const dynamic = "force-dynamic";
 
 export async function POST(req: Request, { params }: { params: Promise<{ tokenId: string }> }) {
   checkRateLimit(getClientIp(req), 20);
-  const ctx = requireOperator(req);
+  const ctx = await requireOperator(req);
 
   return handleRoute(async () => {
     const { tokenId } = await params;
-    const token = requireToken(tokenId);
+    const token = await requireToken(tokenId);
     if (!token.keys.pause) throw new ApiError("This token was created without a pause key.", 400);
 
     const { paused } = pauseSchema.parse(await readJson<unknown>(req));
@@ -27,8 +27,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ tokenId
         ? await pauseToken(tokenId)
         : await unpauseToken(tokenId);
 
-    setTokenPaused(tokenId, paused);
-    insertEvent({
+    await setTokenPaused(tokenId, paused);
+    await insertEvent({
       tokenId,
       type: paused ? "PAUSE" : "UNPAUSE",
       txId: result.txId,

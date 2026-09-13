@@ -13,7 +13,7 @@ type IdentityPolicy = "identity-age" | "identity-us";
 
 export async function POST(request: Request) {
   checkRateLimit(getClientIp(request), 30);
-  const ctx = requireInvestor(request);
+  const ctx = await requireInvestor(request);
   const body = (await request.json().catch(() => null)) as
     | { result?: unknown; policy?: IdentityPolicy }
     | null;

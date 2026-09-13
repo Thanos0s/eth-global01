@@ -46,7 +46,7 @@ describe("Smart Contract Architecture & Behavioral Invariants", () => {
 
     it("solvency invariant: monthly obligated flow must never exceed deposited rent reserve", () => {
       // Simulate reserve accounting
-      let totalRentDeposited = BigInt(11400) * (BigInt(10) ** BigInt(18)); // 3 months of rent
+      const totalRentDeposited = BigInt(11400) * (BigInt(10) ** BigInt(18)); // 3 months of rent
       let totalObligatedPerSec = BigInt(0);
 
       const addStream = (flowRate: bigint) => {

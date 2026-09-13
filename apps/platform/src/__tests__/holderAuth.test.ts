@@ -15,14 +15,14 @@ describe("Holder-Scoped Mutation Route Authorization", () => {
   let sessionOperator: string;
   const testTokenId = "0.0.4491823";
 
-  beforeAll(() => {
-    sessionInvestorA = createAuthSession({
+  beforeAll(async () => {
+    sessionInvestorA = await createAuthSession({
       address: investorA,
       role: "investor",
       expiresAt: Date.now() + 3600000,
     });
 
-    sessionOperator = createAuthSession({
+    sessionOperator = await createAuthSession({
       address: operatorAddr,
       role: "operator",
       expiresAt: Date.now() + 3600000,

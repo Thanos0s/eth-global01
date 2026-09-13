@@ -11,10 +11,10 @@ interface SubgraphQueryBody {
   tokenAddress?: string;
 }
 
-function getDynamicSubgraphData(targetTokenId?: string) {
+async function getDynamicSubgraphData(targetTokenId?: string) {
   let dbTokens: any[] = [];
   try {
-    dbTokens = listTokens();
+    dbTokens = await listTokens();
   } catch {
     dbTokens = [];
   }
@@ -28,8 +28,8 @@ function getDynamicSubgraphData(targetTokenId?: string) {
   let events: any[] = [];
   if (tokenId) {
     try {
-      holders = listHolders(tokenId);
-      events = listEvents(tokenId);
+      holders = await listHolders(tokenId);
+      events = await listEvents(tokenId);
     } catch {
       holders = [];
       events = [];
@@ -150,7 +150,7 @@ function getDynamicSubgraphData(targetTokenId?: string) {
 export async function GET() {
   const subgraphUrl = process.env.SUBGRAPH_URL;
   const isLive = Boolean(subgraphUrl && subgraphUrl.startsWith("http"));
-  const dynamicData = getDynamicSubgraphData();
+  const dynamicData = await getDynamicSubgraphData();
 
   return NextResponse.json({
     status: "ok",
@@ -207,7 +207,7 @@ export async function POST(req: Request) {
       }
     }
 
-    const dynamicData = getDynamicSubgraphData(body.tokenAddress);
+    const dynamicData = await getDynamicSubgraphData(body.tokenAddress);
 
     // Otherwise return rich dynamic GraphQL response for client demo
     if (body.action === "top_holders") {

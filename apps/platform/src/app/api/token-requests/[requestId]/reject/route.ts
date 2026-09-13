@@ -10,10 +10,10 @@ export async function POST(
   { params }: { params: Promise<{ requestId: string }> }
 ) {
   return handleRoute(async () => {
-    requireAgentRequest(req);
+    await requireAgentRequest(req);
     const { requestId } = await params;
     const { reason } = rejectTokenRequestSchema.parse(await readJson<unknown>(req));
-    const request = rejectStoredTokenRequest(parseRequestId(requestId), reason);
+    const request = await rejectStoredTokenRequest(parseRequestId(requestId), reason);
     return NextResponse.json({ request });
   });
 }

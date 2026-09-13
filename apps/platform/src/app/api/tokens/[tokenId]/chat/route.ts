@@ -36,7 +36,7 @@ function normalizeAccountId(token: TokenRecord, accountId: string): string {
 export async function GET(req: Request, { params }: { params: Promise<{ tokenId: string }> }) {
   return handleRoute(async () => {
     const { tokenId } = await params;
-    const token = requireToken(tokenId);
+    const token = await requireToken(tokenId);
     const accountId = new URL(req.url).searchParams.get("accountId");
 
     if (!accountId) return NextResponse.json({ eligible: false });
@@ -88,7 +88,7 @@ function tokenContextMessage(token: TokenRecord) {
 export async function POST(req: Request, { params }: { params: Promise<{ tokenId: string }> }) {
   return handleRoute(async () => {
     const { tokenId } = await params;
-    const token = requireToken(tokenId);
+    const token = await requireToken(tokenId);
 
     const { accountId, messages } = chatRequestSchema.parse(await readJson<unknown>(req));
     const normalizedAccountId = normalizeAccountId(token, accountId);

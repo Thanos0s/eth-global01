@@ -24,6 +24,14 @@ import {
 import { getOperatorClient, getOperatorId, getOperatorKey, isOperatorConfigured } from "./client";
 import { hashscanTxUrl } from "./format";
 import type { ComplianceOptions, CustomFeeConfig, TokenType as DomainTokenType } from "@/types";
+import { isDemoMode } from "@/lib/demo";
+
+export class HederaConfigurationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "HederaConfigurationError";
+  }
+}
 
 export interface CreateTokenParams {
   name: string;
@@ -74,6 +82,8 @@ export interface CreateTokenResult {
     supply: boolean;
     feeSchedule: boolean;
   };
+  _demo?: boolean;
+  simulationNotice?: string;
 }
 
 /**
@@ -93,15 +103,23 @@ export async function createToken(params: CreateTokenParams): Promise<CreateToke
   };
 
   if (!isOperatorConfigured()) {
-    // Generate valid testnet token ID & transaction for development/demo environments
-    const fallbackTokenId = `0.0.${Math.floor(Date.now() / 1000) % 900000 + 4490000}`;
-    const fallbackTxId = `0.0.4491823-${Math.floor(Date.now() / 1000)}-000000000`;
-    return {
-      tokenId: fallbackTokenId,
-      txId: fallbackTxId,
-      hashscanUrl: `https://hashscan.io/testnet/token/${fallbackTokenId}`,
-      keys,
-    };
+    // Generate simulated testnet token ID only in demo mode outside production
+    if (isDemoMode() && process.env.NODE_ENV !== "production") {
+      const fallbackTokenId = `demo-0.0.${Math.floor(Date.now() / 1000) % 900000 + 4490000}`;
+      const fallbackTxId = `demo-0.0.4491823-${Math.floor(Date.now() / 1000)}-000000000`;
+      return {
+        tokenId: fallbackTokenId,
+        txId: fallbackTxId,
+        hashscanUrl: `https://hashscan.io/testnet/token/${fallbackTokenId}`,
+        keys,
+        _demo: true,
+        simulationNotice: "Simulated — not on-chain.",
+      };
+    }
+
+    throw new HederaConfigurationError(
+      "Hedera operator credentials are not configured and demo mode is disabled. Cannot create token on-chain."
+    );
   }
 
   const client = getOperatorClient();
@@ -149,6 +167,12 @@ export async function createToken(params: CreateTokenParams): Promise<CreateToke
 }
 
 export async function getTokenBalanceBaseUnits(tokenId: string, accountId: string): Promise<bigint> {
+  if (!isOperatorConfigured()) {
+    if (isDemoMode() && process.env.NODE_ENV !== "production") {
+      return BigInt(1000);
+    }
+    throw new HederaConfigurationError("Hedera operator credentials are not configured.");
+  }
   const client = getOperatorClient();
   const balance = await new AccountBalanceQuery().setAccountId(AccountId.fromString(accountId)).execute(client);
   const amount = balance.tokens?.get(TokenId.fromString(tokenId));
@@ -160,6 +184,12 @@ export async function getTokenBalance(tokenId: string, accountId: string): Promi
 }
 
 export async function isAssociated(tokenId: string, accountId: string): Promise<boolean> {
+  if (!isOperatorConfigured()) {
+    if (isDemoMode() && process.env.NODE_ENV !== "production") {
+      return true;
+    }
+    throw new HederaConfigurationError("Hedera operator credentials are not configured.");
+  }
   const client = getOperatorClient();
   const balance = await new AccountBalanceQuery().setAccountId(AccountId.fromString(accountId)).execute(client);
   // `.get()` on the token balance map only returns a value when the account holds an explicit
@@ -175,8 +205,14 @@ interface TxResult {
 // The Hedera SDK's Transaction subclasses are self-referencing generics (e.g.
 // `TokenFreezeTransaction extends Transaction<TokenFreezeTransaction>`), which makes a precise
 // shared parameter type unwieldy here; `any` keeps this helper usable for every transaction kind.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function runAsOperator(tx: any): Promise<TxResult> {
+  if (!isOperatorConfigured()) {
+    if (isDemoMode() && process.env.NODE_ENV !== "production") {
+      const fallbackTxId = `demo-tx-${Date.now()}`;
+      return { txId: fallbackTxId, hashscanUrl: hashscanTxUrl(fallbackTxId) };
+    }
+    throw new HederaConfigurationError("Hedera operator credentials are not configured.");
+  }
   const client = getOperatorClient();
   const operatorKey = getOperatorKey();
   const frozen = tx.freezeWith(client);

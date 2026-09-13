@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Production: Require operator or internal agent authorization
-  const authCtx = requireOperatorOrAgent(req);
+  const authCtx = await requireOperatorOrAgent(req);
 
   try {
     const body = await req.json();
@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
     // 1. Safety Guardrail Evaluation & Atomic Spend
     if (simulateMalicious) {
       const maliciousAction = "UNAUTHORIZED_TREASURY_TRANSFER";
-      const validation = validateAndSpendSession(
+      const validation = await validateAndSpendSession(
         sessionId,
         maliciousAction,
         100.0,
@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const validation = validateAndSpendSession(
+    const validation = await validateAndSpendSession(
       sessionId,
       "ORACLE_USPS_X402",
       0.5,
@@ -124,8 +124,8 @@ export async function POST(req: NextRequest) {
 
     // Step A: x402 Micropayment verification
     // In production, real paymentTxId must come from an actual signed transaction. Do not sample unrelated transactions.
-    let paymentTxId: string | null = null;
-    let paymentExplorerUrl: string | null = null;
+    const paymentTxId: string | null = null;
+    const paymentExplorerUrl: string | null = null;
 
     steps.push({
       stepNumber: 1,
@@ -180,8 +180,8 @@ export async function POST(req: NextRequest) {
 
     // Step D: Superfluid CFA Per-Second Yield Stream Creation
     // In production, real baseSepoliaTxHash must come from an actual signed transaction. Do not sample unrelated transactions.
-    let baseSepoliaTxHash: string | null = null;
-    let baseSepoliaExplorerUrl: string | null = null;
+    const baseSepoliaTxHash: string | null = null;
+    const baseSepoliaExplorerUrl: string | null = null;
 
     steps.push({
       stepNumber: 4,

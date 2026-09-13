@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { ApiError, handleRoute, readJson } from "@/lib/api/helpers";
 import { insertEvent, insertToken, listTokens } from "@/lib/db/repo";
 import { createToken } from "@/lib/hedera/tokenService";
-import { getOperatorId } from "@/lib/hedera/client";
+import { getOperatorId, isOperatorConfigured } from "@/lib/hedera/client";
 import { createTokenSchema } from "@/lib/validation";
 import { configuredHederaNetwork } from "@/lib/chains";
 
@@ -13,12 +13,12 @@ import { auditLog } from "@/lib/audit/logger";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  return handleRoute(async () => NextResponse.json({ tokens: listTokens() }));
+  return handleRoute(async () => NextResponse.json({ tokens: await listTokens() }));
 }
 
 export async function POST(req: Request) {
   checkRateLimit(getClientIp(req), 30);
-  const ctx = requireOperator(req);
+  const ctx = await requireOperator(req);
 
   return handleRoute(async () => {
     const body = await readJson<unknown>(req);
@@ -40,7 +40,10 @@ export async function POST(req: Request) {
       customFee: input.customFee ?? null,
     });
 
-    const token = insertToken({
+    const isSimulated = !!(created as any)._demo;
+    const treasuryAccountId = isOperatorConfigured() ? getOperatorId().toString() : "0.0.4491823";
+
+    const token = await insertToken({
       id: created.tokenId,
       blockchain: "HEDERA",
       network: configuredHederaNetwork(),
@@ -51,16 +54,16 @@ export async function POST(req: Request) {
       initialSupply: input.tokenType === "NFT" ? 0 : input.initialSupply,
       supplyType: input.supplyType,
       maxSupply: input.maxSupply,
-      treasuryAccountId: getOperatorId().toString(),
+      treasuryAccountId,
       assetCategory: input.assetCategory,
-      memo: input.memo,
+      memo: isSimulated ? `${input.memo || "Token"} [SIMULATED - DEMO ONLY]` : input.memo,
       compliance: input.compliance,
       customFee: input.customFee ?? null,
       keys: created.keys,
       createTxId: created.txId,
     });
 
-    insertEvent({
+    await insertEvent({
       tokenId: token.id,
       type: "CREATE_TOKEN",
       detail: { name: token.name, symbol: token.symbol, tokenType: token.tokenType },
@@ -71,8 +74,8 @@ export async function POST(req: Request) {
     // Ensure initial treasury holder exists
     try {
       const { ensureHolder, updateHolder } = await import("@/lib/db/repo");
-      ensureHolder(token.id, token.treasuryAccountId, null);
-      updateHolder(token.id, token.treasuryAccountId, {
+      await ensureHolder(token.id, token.treasuryAccountId, null);
+      await updateHolder(token.id, token.treasuryAccountId, {
         associated: true,
         kycGranted: true,
         status: "WHITELISTED",

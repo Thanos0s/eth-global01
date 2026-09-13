@@ -18,11 +18,11 @@ function extractSessionId(req: Request | NextRequest): string | null {
   return matchAuth ? matchAuth[1].trim() : null;
 }
 
-export function resolveAuthContext(req: Request | NextRequest): AuthContext | null {
+export async function resolveAuthContext(req: Request | NextRequest): Promise<AuthContext | null> {
   const sessionId = extractSessionId(req);
   if (!sessionId) return null;
 
-  const row = getAuthSession(sessionId);
+  const row = await getAuthSession(sessionId);
   if (!row || row.revoked || row.expiresAt < Date.now()) return null;
 
   return {
@@ -32,8 +32,8 @@ export function resolveAuthContext(req: Request | NextRequest): AuthContext | nu
   };
 }
 
-export function requireOperator(req: Request | NextRequest): AuthContext {
-  const ctx = resolveAuthContext(req);
+export async function requireOperator(req: Request | NextRequest): Promise<AuthContext> {
+  const ctx = await resolveAuthContext(req);
   if (!ctx) {
     throw new ApiError("Authentication required. Please sign in with an operator wallet.", 401);
   }
@@ -43,11 +43,11 @@ export function requireOperator(req: Request | NextRequest): AuthContext {
   return ctx;
 }
 
-export function requireInvestor(
+export async function requireInvestor(
   req: Request | NextRequest,
   allowedAccountId?: string
-): AuthContext {
-  const ctx = resolveAuthContext(req);
+): Promise<AuthContext> {
+  const ctx = await resolveAuthContext(req);
   if (!ctx) {
     throw new ApiError("Authentication required. Please sign in with your wallet.", 401);
   }
@@ -64,10 +64,10 @@ export function requireInvestor(
   return ctx;
 }
 
-export function requireOperatorOrAgent(req: Request | NextRequest): AuthContext {
+export async function requireOperatorOrAgent(req: Request | NextRequest): Promise<AuthContext> {
   // Try agent secret first
   try {
-    requireAgentRequest(req);
+    await requireAgentRequest(req);
     return {
       role: "agent" as any,
       address: "__agent__",
@@ -75,6 +75,6 @@ export function requireOperatorOrAgent(req: Request | NextRequest): AuthContext 
     };
   } catch {
     // Fall back to operator authentication
-    return requireOperator(req);
+    return await requireOperator(req);
   }
 }

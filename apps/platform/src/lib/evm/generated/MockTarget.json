@@ -1,0 +1,116 @@
+{
+  "abi": [
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "caller",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "newCount",
+          "type": "uint256"
+        }
+      ],
+      "name": "Incremented",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "caller",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "value",
+          "type": "uint256"
+        }
+      ],
+      "name": "ValueReceived",
+      "type": "event"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "add",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "blockedAction",
+      "outputs": [],
+      "stateMutability": "pure",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "count",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "increment",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "lastCaller",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "lastValue",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "payMe",
+      "outputs": [],
+      "stateMutability": "payable",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x6080604052348015600e575f5ffd5b5061031b8061001c5f395ff3fe60806040526004361061006e575f3560e01c8063431838341161004c57806343183834146100f1578063724fdb3e14610106578063d09de08a1461011a578063d997ccb31461012e575f5ffd5b806306661abd146100725780631003e2d2146100995780632113522a146100ba575b5f5ffd5b34801561007d575f5ffd5b506100865f5481565b6040519081526020015b60405180910390f35b3480156100a4575f5ffd5b506100b86100b33660046102a9565b610136565b005b3480156100c5575f5ffd5b506001546100d9906001600160a01b031681565b6040516001600160a01b039091168152602001610090565b3480156100fc575f5ffd5b5061008660025481565b348015610111575f5ffd5b506100b8610198565b348015610125575f5ffd5b506100b86101fb565b6100b861025e565b805f5f82825461014691906102c0565b9091555050600180546001600160a01b031916339081179091555f546040519081527f38ac789ed44572701765277c4d0970f2db1c1a571ed39e84358095ae4eaa54209060200160405180910390a250565b60405162461bcd60e51b815260206004820152602e60248201527f53686f756c64206e65766572206265207265616368656420756e64657220706f60448201526d1b1a58de48185b1b1bdddb1a5cdd60921b606482015260840160405180910390fd5b60015f5f82825461020c91906102c0565b9091555050600180546001600160a01b031916339081179091555f546040519081527f38ac789ed44572701765277c4d0970f2db1c1a571ed39e84358095ae4eaa5420906020015b60405180910390a2565b600180546001600160a01b031916339081179091553460028190556040519081527f7e71433ddf847725166244795048ecf3e3f9f35628254ecbf73605666423349390602001610254565b5f602082840312156102b9575f5ffd5b5035919050565b808201808211156102df57634e487b7160e01b5f52601160045260245ffd5b9291505056fea2646970667358221220ee5ceb4a96881c181ee80164eea3edcd895d21a501704fe41f782d23fcbdb91364736f6c634300081e0033"
+}

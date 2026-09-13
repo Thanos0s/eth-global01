@@ -9,7 +9,7 @@ export async function GET(
   { params }: { params: Promise<{ requestId: string }> }
 ) {
   return handleRoute(async () => {
-    requireAgentRequest(req);
+    await requireAgentRequest(req);
     const { requestId: rawRequestId } = await params;
     const request = getTokenRequest(parseRequestId(rawRequestId));
     if (!request) throw new ApiError(`Token request ${rawRequestId} not found`, 404);

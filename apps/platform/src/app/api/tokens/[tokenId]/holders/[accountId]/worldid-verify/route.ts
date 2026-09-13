@@ -27,9 +27,9 @@ export async function POST(
 
   return handleRoute(async () => {
     const { tokenId, accountId } = await params;
-    requireInvestor(req, accountId);
-    const token = requireToken(tokenId);
-    const holder = getHolder(tokenId, accountId);
+    await requireInvestor(req, accountId);
+    const token = await requireToken(tokenId);
+    const holder = await getHolder(tokenId, accountId);
     if (!holder) throw new ApiError("Join this token before verifying with World ID.", 404);
     if (!holder.associated) {
       throw new ApiError("Associate this token with your wallet before World ID verification.", 409);
@@ -77,7 +77,7 @@ export async function POST(
       throw new ApiError("The World ID proof is empty or too large.", 413);
     }
 
-    const verification = createWorldIdVerification({
+    const verification = await createWorldIdVerification({
       tokenId,
       accountId,
       check,

@@ -21,8 +21,8 @@ export async function POST(
 
   return handleRoute(async () => {
     const { tokenId, accountId } = await params;
-    requireInvestor(req, accountId);
-    requireToken(tokenId);
+    await requireInvestor(req, accountId);
+    await requireToken(tokenId);
     const { txId } = txReceiptSchema.parse(await readJson<unknown>(req));
 
     const confirmed = await isAssociated(tokenId, accountId);
@@ -33,8 +33,8 @@ export async function POST(
       );
     }
 
-    updateHolder(tokenId, accountId, { associated: true });
-    insertEvent({ tokenId, accountId, type: "ASSOCIATE", txId, hashscanUrl: hashscanTxUrl(txId) });
+    await updateHolder(tokenId, accountId, { associated: true });
+    await insertEvent({ tokenId, accountId, type: "ASSOCIATE", txId, hashscanUrl: hashscanTxUrl(txId) });
 
     return NextResponse.json({ associated: true });
   });

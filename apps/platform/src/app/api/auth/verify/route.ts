@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getAddress, verifyMessage } from "ethers";
 import { consumeAuthNonce, createAuthSession } from "@/lib/db/repo";
 import { handleRoute, readJson, ApiError } from "@/lib/api/helpers";
@@ -36,13 +36,13 @@ export async function POST(req: NextRequest) {
       throw new ApiError("Signature address mismatch", 401);
     }
 
-    if (!consumeAuthNonce(nonce, address)) {
+    if (!(await consumeAuthNonce(nonce, address))) {
       throw new ApiError("Invalid or expired nonce", 401);
     }
 
     const role = OPERATOR_ALLOWLIST.has(address.toLowerCase()) ? "operator" : "investor";
     const expiresAt = Date.now() + 24 * 60 * 60 * 1000;
-    const sessionId = createAuthSession({
+    const sessionId = await createAuthSession({
       address: address.toLowerCase(),
       role,
       expiresAt,

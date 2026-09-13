@@ -28,8 +28,7 @@ export interface WorldIdVerifyResult {
 
 export async function verifyWorldId(
   accountId: string,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  proof?: WorldIdProof
+  _proof?: WorldIdProof
 ): Promise<WorldIdVerifyResult> {
   // TODO(real integration): replace with IDKit's verifyCloudProof(proof, app_id, action)
   // and persist the returned nullifier_hash to prevent a single human from verifying twice.

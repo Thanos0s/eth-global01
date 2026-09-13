@@ -16,7 +16,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   const grantor = req.nextUrl.searchParams.get("grantor") || undefined;
-  const session = getActiveSession(grantor);
+  const session = await getActiveSession(grantor);
   return NextResponse.json({
     success: true,
     session,
@@ -50,10 +50,10 @@ export async function POST(req: NextRequest) {
     }
 
     // Authenticated investor check (user must match grantor or be operator)
-    const ctx = requireInvestor(req, grantor);
+    const ctx = await requireInvestor(req, grantor);
 
     const policyNonce = nonce ?? Date.now();
-    const session = createSessionGrant(
+    const session = await createSessionGrant(
       grantor,
       signature,
       constraints,

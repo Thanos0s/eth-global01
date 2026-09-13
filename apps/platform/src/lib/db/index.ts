@@ -5,6 +5,10 @@ import path from "node:path";
 import { SCHEMA_SQL } from "./schema";
 import { serializeWorldIdProof } from "../worldid/proof";
 import { seedDatabase } from "./seed";
+import { getPostgresPool, migratePostgres, checkPostgresHealth } from "./postgres";
+import { PostgresAdapter } from "./postgresAdapter";
+import { SqliteAdapter } from "./sqliteAdapter";
+import type { IDatabaseAdapter } from "./types";
 
 // Boot-time production environment validation: fail-closed if required secrets are missing at server runtime
 const isBuildPhase =
@@ -27,6 +31,15 @@ if (
   if (missing.length > 0) {
     throw new Error(
       `[boot] FATAL: Missing required production environment variables: ${missing.join(", ")}. Refusing to start.`
+    );
+  }
+}
+
+if (!isBuildPhase) {
+  const hederaNet = (process.env.HEDERA_NETWORK ?? "testnet").toLowerCase();
+  if (hederaNet === "mainnet") {
+    throw new Error(
+      "[boot] FATAL: HEDERA_NETWORK=mainnet is not permitted. This release of Prism 8 is strictly testnet/previewnet only."
     );
   }
 }
@@ -91,7 +104,10 @@ function migrateTokenChains(db: Database.Database): void {
   }
   if (addedNetwork) {
     const configured = (process.env.HEDERA_NETWORK ?? "testnet").toLowerCase();
-    const network = configured === "mainnet" || configured === "previewnet" ? configured : "testnet";
+    if (configured === "mainnet") {
+      throw new Error("FATAL: Mainnet configuration rejected in testnet-only mode.");
+    }
+    const network = configured === "previewnet" ? "previewnet" : "testnet";
     db.prepare("UPDATE tokens SET network = ? WHERE blockchain = 'HEDERA'").run(network);
   }
 }
@@ -229,37 +245,60 @@ export function getDb(): Database.Database {
   return globalThis.__tokenizationDb;
 }
 
-export { getPostgresPool, migratePostgres, checkPostgresHealth } from "./postgres";
+export { getPostgresPool, migratePostgres, checkPostgresHealth, PostgresAdapter, SqliteAdapter };
+export type { IDatabaseAdapter };
+
+declare global {
+  var __dbAdapter: IDatabaseAdapter | undefined;
+}
+
+export function getDbAdapter(): IDatabaseAdapter {
+  if (globalThis.__dbAdapter) {
+    return globalThis.__dbAdapter;
+  }
+
+  const isProduction = process.env.NODE_ENV === "production" && process.env.DEMO_MODE !== "true";
+  const connectionString = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+
+  if (isProduction) {
+    const pool = getPostgresPool();
+    if (!pool) {
+      throw new Error(
+        "[boot] FATAL: PostgreSQL DATABASE_URL is required in production. Refusing to fall back to SQLite."
+      );
+    }
+    globalThis.__dbAdapter = new PostgresAdapter(pool);
+    return globalThis.__dbAdapter;
+  }
+
+  if (connectionString) {
+    const pool = getPostgresPool();
+    if (pool) {
+      globalThis.__dbAdapter = new PostgresAdapter(pool);
+      return globalThis.__dbAdapter;
+    }
+  }
+
+  globalThis.__dbAdapter = new SqliteAdapter(getDb());
+  return globalThis.__dbAdapter;
+}
 
 export async function getDatabaseHealth(): Promise<{
   dialect: "postgres" | "sqlite";
   status: "ok" | "degraded";
+  migrationStatus: "applied" | "pending";
   latencyMs: number;
   error?: string;
 }> {
-  if (process.env.DATABASE_URL || process.env.POSTGRES_URL) {
-    const pg = await (await import("./postgres")).checkPostgresHealth();
-    return {
-      dialect: "postgres",
-      status: pg.ok ? "ok" : "degraded",
-      latencyMs: pg.latencyMs,
-      error: pg.error,
-    };
-  }
-
-  const start = Date.now();
   try {
-    getDb().prepare("SELECT 1").get();
-    return {
-      dialect: "sqlite",
-      status: "ok",
-      latencyMs: Date.now() - start,
-    };
+    const adapter = getDbAdapter();
+    return await adapter.getHealth();
   } catch (err: any) {
     return {
-      dialect: "sqlite",
+      dialect: process.env.NODE_ENV === "production" && process.env.DEMO_MODE !== "true" ? "postgres" : "sqlite",
       status: "degraded",
-      latencyMs: Date.now() - start,
+      migrationStatus: "pending",
+      latencyMs: 0,
       error: err.message,
     };
   }
