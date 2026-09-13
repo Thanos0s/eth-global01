@@ -478,11 +478,15 @@ export function AgenticSafetyCockpit({ onWorkflowComplete }: AgenticSafetyCockpi
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
                 <div className="p-2 bg-neutral-50 border border-neutral-200">
                   <div className="text-[9px] text-neutral-500 uppercase font-semibold">Grantor</div>
-                  <div className="font-bold text-black font-mono text-xs truncate">{executionResult.sessionProof.grantor.slice(0, 10)}...</div>
+                  <div className="font-bold text-black font-mono text-xs truncate">
+                    {executionResult.sessionProof.grantor ? `${executionResult.sessionProof.grantor.slice(0, 10)}...` : "—"}
+                  </div>
                 </div>
                 <div className="p-2 bg-neutral-50 border border-neutral-200">
                   <div className="text-[9px] text-neutral-500 uppercase font-semibold">Agent</div>
-                  <div className="font-bold text-black font-mono text-xs truncate">{executionResult.sessionProof.agent.slice(0, 10)}...</div>
+                  <div className="font-bold text-black font-mono text-xs truncate">
+                    {executionResult.sessionProof.agent ? `${executionResult.sessionProof.agent.slice(0, 10)}...` : "—"}
+                  </div>
                 </div>
                 <div className="p-2 bg-neutral-50 border border-neutral-200">
                   <div className="text-[9px] text-neutral-500 uppercase font-semibold">Budget Limit</div>
@@ -530,9 +534,11 @@ export function AgenticSafetyCockpit({ onWorkflowComplete }: AgenticSafetyCockpi
                   <div className="flex items-center gap-1.5">
                     {step.network?.includes("The Graph") ? (
                       <div className="flex items-center gap-1.5">
-                        <span className="text-neutral-500 font-mono text-[10px]">
-                          IPFS: {step.txId.slice(0, 14)}...
-                        </span>
+                        {step.txId && (
+                          <span className="text-neutral-500 font-mono text-[10px]">
+                            IPFS: {step.txId.slice(0, 14)}...
+                          </span>
+                        )}
                         <button
                           type="button"
                           onClick={() => setIsGraphModalOpen(true)}
@@ -553,17 +559,33 @@ export function AgenticSafetyCockpit({ onWorkflowComplete }: AgenticSafetyCockpi
                       </div>
                     ) : (
                       <div className="flex items-center gap-1.5">
-                        <span className="text-neutral-500 font-mono text-[10px]">
-                          Tx: {step.txId.slice(0, 16)}...
-                        </span>
-                        <a
-                          href={step.explorerUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="px-2 py-0.5 bg-neutral-100 hover:bg-neutral-200 border border-neutral-300 text-black text-[10px] font-bold hover:border-black transition flex items-center gap-0.5"
-                        >
-                          <span>{step.network.includes("Hedera") ? "HashScan ↗" : step.network.includes("Base") ? "BaseScan ↗" : "Explorer ↗"}</span>
-                        </a>
+                        {step.txId ? (
+                          <>
+                            <span className="text-neutral-500 font-mono text-[10px]">
+                              Tx: {step.txId.slice(0, 16)}...
+                            </span>
+                            {step.explorerUrl && (
+                              <a
+                                href={step.explorerUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="px-2 py-0.5 bg-neutral-100 hover:bg-neutral-200 border border-neutral-300 text-black text-[10px] font-bold hover:border-black transition flex items-center gap-0.5"
+                              >
+                                <span>
+                                  {step.network?.includes("Hedera")
+                                    ? "HashScan ↗"
+                                    : step.network?.includes("Base")
+                                    ? "BaseScan ↗"
+                                    : "Explorer ↗"}
+                                </span>
+                              </a>
+                            )}
+                          </>
+                        ) : (
+                          <span className="text-neutral-500 font-mono text-[10px] italic">
+                            {step.status || "Pending Settlement"}
+                          </span>
+                        )}
                       </div>
                     )}
                   </div>
