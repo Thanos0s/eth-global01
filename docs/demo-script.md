@@ -28,16 +28,26 @@ Click **Test Guardrail (Simulate Rogue Action)** and show the rejection card.
 
 > Now we ask Hermes to do something outside that policy: an unauthorized treasury transfer. The same cryptographic validator rejects it. Useful autonomy is allowed; unbounded autonomy is not.
 
-## 2:25–3:00 — Show what safety unlocks
+## 2:25–3:15 — The Graph Track: Live Blockchain Indexing & Autonomous Tooling
 
-Point to the The Graph and Superfluid sections below the cockpit.
+Click **The Graph AI Inspector** button on the storefront.
 
-> Once an asset is verified, The Graph indexes holders for allocation and Superfluid streams rental yield per second. Those rails matter because the agent’s authority is enforceable before it touches economic activity.
+> For downstream yield distribution, Hermes queries The Graph Studio to index fractional token holders and balances.
+> Notice the **LIVE STUDIO** badge and the `_meta` health status. When we click **Run Live Graph Allocation Discovery**, Hermes queries The Graph, verifies zero indexing errors, computes exact proportional shares, and derives per-second Superfluid CFA flow rates.
+> Notice the **Data Provenance** tab: every decision records the subgraph deployment hash, block number, and query timestamp. If indexing errors occur or data is stale, the agent fails closed.
+> In addition, Hermes is equipped with two isolated MCP servers: `subgraph_read` for safe query inspection and `subgraph_write` for autonomous manifest mutation and deployment to Graph Studio.
+
+## 3:15–3:45 — Show continuous streaming outcome (Superfluid)
+
+Point to the Superfluid Yield Dashboard below the cockpit.
+
+> Once The Graph computes the proportional allocation, Superfluid opens continuous flow agreements (CFA) on Base Sepolia. The storefront counter ticks continuously per-second to show real-time rental yield streaming directly to the verified primary investor.
 
 ## Presenter checklist
 
 - Storefront open at `/` and wallet connected to the intended testnet.
 - Start at the Judge demo rail; do not lead with every integration.
 - Show the actual cockpit controls and ledger results.
+- Open **The Graph AI Inspector** to showcase `_meta` indexing health, live holder breakdown, derived CFA flow rates, and data provenance.
 - Say “testnet/demo” whenever discussing x402, tokenization, or streaming.
-- Keep Graph and Superfluid to the final proof-of-outcome section.
+- Point to `docs/THE_GRAPH_QUALIFICATION_EVIDENCE.md` for complete technical proof and automated test commands.

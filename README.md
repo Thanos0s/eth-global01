@@ -78,16 +78,17 @@ Prism 8 fulfills **both halves** of The Graph hackathon track plus the featured 
 
 ### Way 1: Tooling for AI Environments
 * **Dual MCP Servers (`@modelcontextprotocol/sdk`)**:
-  * [`apps/agent/mcps/subgraph/mcp-server/src/read.ts`](apps/agent/mcps/subgraph/mcp-server/src/read.ts) (**`subgraph_read`**): Equips LLM agents with 8 tools to query on-chain indexed data in natural language (`get_token_info`, `get_top_holders`, `get_recent_transfers`, `get_account_balance`, `get_biggest_transfer`, `get_tracked_tokens`, `get_deployment_status`).
-  * [`apps/agent/mcps/subgraph/mcp-server/src/write.ts`](apps/agent/mcps/subgraph/mcp-server/src/write.ts) (**`subgraph_write`**): Autonomous manifest mutation pipeline (`add_token_source`, `set_token_sources`) that dynamically rewrites `subgraph.yaml`, executes `graph codegen`, builds, and redeploys to Graph Studio with zero human intervention.
-* **Featured x402 Autonomous Payment Challenge**:
-  * The Graph track prompt asks: *"or let your agent pay per query autonomously with x402"*.
-  * Prism 8 implements this via native Hedera x402 + Blocky402 facilitator, allowing agents to pay for data queries and oracles per call with zero subscription lock-in.
+  * [`apps/agent/mcps/subgraph/mcp-server/src/read.ts`](apps/agent/mcps/subgraph/mcp-server/src/read.ts) (**`subgraph_read`**): Equips LLM agents with 8 read-only tools to query on-chain indexed data in natural language (`get_token_info`, `get_top_holders`, `get_recent_transfers`, `get_account_balance`, `get_biggest_transfer`, `get_tracked_tokens`, `get_deployment_status`, `get_latest_sepolia_block`).
+  * [`apps/agent/mcps/subgraph/mcp-server/src/write.ts`](apps/agent/mcps/subgraph/mcp-server/src/write.ts) (**`subgraph_write`**): Autonomous manifest mutation pipeline (`add_token_source`, `set_token_sources`) that dynamically rewrites `subgraph.yaml`, executes `graph codegen`, builds, and redeploys to Graph Studio using isolated `GRAPH_DEPLOY_KEY` credentials.
+* **Full Documentation & Configs**: See [`apps/agent/mcps/subgraph/mcp-server/README.md`](apps/agent/mcps/subgraph/mcp-server/README.md) for Claude Desktop, Cursor, and Hermes setup JSONs.
 
-### Way 2: AI Agent Using Live Blockchain Data
-* **Autonomous Real-Estate Yield Allocation**: The Hermes agent uses `subgraph_read.get_top_holders` to query live fractional real-estate ownership distributions, deriving proportional shareholder percentages to open Superfluid CFA cashflow streams.
-* **Public Token Chat**: Investors query their token metrics in natural language via `/api/tokens/[tokenId]/chat`, where Hermes consults The Graph in real-time.
-* **The Graph AI Inspector**: Interactive modal on the storefront homepage allowing users and judges to run live GraphQL queries, test MCP tool calls, and inspect indexer sync health.
+### Way 2: AI Agent Using Live Blockchain Data (Load-Bearing Execution)
+* **Autonomous Real-Estate Yield Allocation**: Hermes executes load-bearing GraphQL queries to discover token holders and balances, computing exact proportional cashflows and per-second Superfluid CFA flow rates:
+  $$\text{holderShare} = \frac{\text{holderBalance}}{\text{totalEligibleBalance}}, \quad \text{flowRatePerSec} = \frac{\text{monthlyRentUsd} \times \text{holderShare}}{2,592,000}$$
+* **Fail-Closed Indexing Health & Staleness Guards**: If `_meta.hasIndexingErrors == true` or block data is stale, Hermes halts downstream yield streaming rather than allocating on corrupt data.
+* **Full Data Provenance Ledger**: Every allocation logs subgraph deployment IDs, indexed block numbers, timestamps, and query parameters.
+* **The Graph AI Inspector**: Interactive modal on the storefront allowing judges to toggle Live Studio vs Demo modes, inspect `_meta` health, run live holder discovery, and audit data provenance.
+* **Track Qualification Guide**: Full evidence dossier and Start Fresh declaration available at [`docs/THE_GRAPH_QUALIFICATION_EVIDENCE.md`](docs/THE_GRAPH_QUALIFICATION_EVIDENCE.md).
 
 ---
 

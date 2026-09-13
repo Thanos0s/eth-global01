@@ -13,6 +13,7 @@ import { requireOperatorOrAgent } from "@/lib/auth/middleware";
 import { checkRateLimit, getClientIp } from "@/lib/api/rateLimit";
 import { auditLog } from "@/lib/audit/logger";
 import { isDemoMode, DEMO_BANNER } from "@/lib/demo";
+import { getLiveShareholderAllocation } from "@/lib/subgraph/subgraphService";
 
 export const dynamic = "force-dynamic";
 
@@ -204,20 +205,32 @@ export async function POST(req: NextRequest) {
       timestamp: new Date().toISOString(),
     });
 
-    // Step C: The Graph Dynamic Shareholder Discovery
+    // Step C: The Graph Dynamic Shareholder Discovery & Real Yield Math
+    const propertyTokenAddress = "0x71C8401E25687352f20D235F8d7fD1A392cf99a8";
+    const graphAllocation = await getLiveShareholderAllocation({
+      tokenAddress: propertyTokenAddress,
+      monthlyRentUsd: property.monthlyRent,
+    });
+
+    const primaryInvestor = graphAllocation.primaryInvestor;
+    const topHolderShare = primaryInvestor.sharePercentage;
+    const streamRate = primaryInvestor.flowRatePerSec;
+    const graphProvenance = graphAllocation.provenance;
+
     steps.push({
       stepNumber: 3,
-      name: "The Graph Studio Holder Discovery",
-      network: "The Graph (Sepolia Indexer)",
-      status: "INDEXED_LIVE",
-      txId: "QmPrism8StudioCapTableHolderMap",
-      explorerUrl: "/api/subgraph",
-      detail: "Hermes queried Subgraph holders via GraphQL. Proportional cap table derived for rental cashflow distribution.",
+      name: "The Graph Studio Live Shareholder Discovery",
+      network: graphAllocation._demo ? "The Graph (Demo Indexer)" : `The Graph Studio (${graphProvenance.deploymentId.slice(0, 10)}...)`,
+      status: graphAllocation._demo ? "INDEXED_SIMULATED" : "INDEXED_LIVE",
+      txId: graphProvenance.deploymentId,
+      explorerUrl: graphAllocation.provenance.subgraphUrl.startsWith("http")
+        ? graphAllocation.provenance.subgraphUrl
+        : "/api/subgraph",
+      detail: `Hermes queried Subgraph holders via GraphQL. Primary investor ${primaryInvestor.address.slice(0, 10)}... holds ${primaryInvestor.formattedBalance} tokens (${topHolderShare}). Proportional cashflow: $${primaryInvestor.monthlyYieldUsd.toFixed(2)}/mo ($${streamRate.toFixed(8)}/sec).`,
       timestamp: new Date().toISOString(),
     });
 
     // Step D: Superfluid CFA Per-Second Yield Stream Creation on Hedera & Base CFA Reserve
-    const streamRate = (property.monthlyRent * 0.1) / 2592000;
     let streamTxId = paymentTxId;
     let streamExplorerUrl = paymentExplorerUrl;
 
@@ -228,8 +241,12 @@ export async function POST(req: NextRequest) {
         amount: `$${property.monthlyRent} USD Rent / $${streamRate.toFixed(6)}/sec`,
         metadata: {
           grantor: session.grantor,
+          investor: primaryInvestor.address,
+          investorShare: topHolderShare,
           monthlyRent: property.monthlyRent,
           flowRatePerSec: streamRate,
+          subgraphDeployment: graphProvenance.deploymentId,
+          subgraphBlockNumber: graphProvenance.indexedBlockNumber,
           reserveContract: "0x7579C0de00000000000000000000000000007579",
         },
       });
@@ -305,6 +322,14 @@ export async function POST(req: NextRequest) {
         expiresAt: new Date(session.expiresAt).toISOString(),
       },
       sessionRemainingHbar: Math.max(0, session.constraints.maxSpendHbar - session.spentHbar),
+      graphAllocation: {
+        tokenAddress: graphAllocation.tokenAddress,
+        totalEligibleBalance: graphAllocation.totalEligibleBalance,
+        primaryInvestor: graphAllocation.primaryInvestor,
+        holders: graphAllocation.holders,
+        provenance: graphAllocation.provenance,
+        _demo: graphAllocation._demo,
+      },
       steps,
       completedAt: new Date().toISOString(),
     });
