@@ -23,16 +23,22 @@ Prism 8 solves this with **ERC-7579 Modular Account Abstraction with Scoped Sess
 
 ---
 
-## ⚡ 1. Hedera x402 Machine-to-Machine Payment Rail
+## ⚡ 1. Hedera x402 Machine-to-Machine Payment Rail (ETHGlobal Track Qualification)
 
 The agentic economy requires payment rails that operate at machine speed: sub-second finality, predictable sub-cent fees, and native token operations without smart contract overhead.
 
-Prism 8 delivers:
-1. **Live x402-gated service on Hedera Testnet**: A metered property verification & physical address validation oracle (`/api/x402/property-oracle`) settled through the **Blocky402** facilitator.
-2. **Autonomous Consuming Agent (Hermes)**: Hermes detects `HTTP 402 Payment Required` challenges, signs and broadcasts micropayments (0.5 HBAR) on Hedera testnet, and completes paid queries end-to-end with **zero human intervention, no API keys, and no subscriptions**.
-3. **Verifiable Payment Audit Trails on HCS**: Every settlement is anchored to a **Hedera Consensus Service (HCS) Topic**, creating an unforgeable, consensus-timestamped public audit log verifiable on HashScan.
-4. **Scheduled Transactions for Yield**: Rent distributions are queued and scheduled via native Hedera `ScheduleCreate` transactions (HIP-423).
-5. **Agent Discovery Directory**: Public machine-readable service directory exposed at `/.well-known/agent-services.json` and `/api/x402/directory`.
+Prism 8 provides an end-to-end, testnet-verifiable agentic payment rail:
+1. **Agent Service Discovery**: Machine-readable directory published at `/.well-known/agent-services.json` and `/api/x402/directory` defining metered tiered pricing (`STANDARD_DPV`: 0.5 HBAR, `PREMIUM_DPV`: 1.0 HBAR) and Blocky402 facilitator routing.
+2. **RFC Standards-Compliant x402 Payment Challenges**: Unpaid requests to `/api/x402/property-oracle` return `HTTP 402 Payment Required` with `WWW-Authenticate: x402 ...` challenge, `X-402-Invoice`, `X-402-Payee`, `X-402-Amount`, and `X-402-Expires` headers.
+3. **Real On-Chain Settlement Verification**: Hedera Mirror Node verifier (`https://testnet.mirrornode.hedera.com/api/v1/transactions/{id}`) cryptographically validates consensus status (`SUCCESS`), recipient account, tinybar transfer amounts, and single-use invoice memo bindings.
+4. **Replay & Double-Spend Protection**: Invoices are cryptographically bound to the query hash and single-use; subsequent requests with consumed invoices or reused transaction IDs are rejected with `HTTP 400 Bad Request`.
+5. **Verifiable Payment Audit Trails on HCS**: Every settlement is anchored to a **Hedera Consensus Service (HCS) Topic** (`0.0.10522243`), creating an unforgeable, consensus-timestamped public audit log verifiable on HashScan.
+6. **Autonomous Consuming Agent (Hermes)**: Hermes detects challenges, signs and broadcasts micropayments on Hedera testnet, and completes queries end-to-end with **zero human intervention**.
+
+```bash
+# Run the live Hedera Testnet x402 end-to-end verification script:
+node scripts/verify-hedera-x402-live.mjs
+```
 
 ---
 
@@ -167,7 +173,7 @@ Open `http://localhost:3000` to view the storefront, live stream dashboard, The 
 ```bash
 cd apps/platform
 
-# Run all automated tests (Vitest 51 tests + contract verification + Subgraph)
+# Run all automated tests (Vitest 76 tests + contract verification + Subgraph)
 npm run test:all
 
 # Run specific test suites
@@ -178,9 +184,10 @@ npm run typecheck           # Strict TypeScript typechecking (tsc --noEmit)
 npm run build               # Next.js 16 production build
 
 # Protocol verification scripts
-node scripts/test-x402-oracle.mjs
-node scripts/test-contracts.mjs
-node scripts/test-subgraph.mjs
+node scripts/verify-hedera-x402-live.mjs  # Live Hedera Testnet x402 + HCS audit proof
+node scripts/test-x402-oracle.mjs         # x402 Oracle protocol & discovery check
+node scripts/test-contracts.mjs           # Smart contract invariant check
+node scripts/test-subgraph.mjs            # The Graph subgraph schema & MCP check
 ```
 
 ### 3. Deploy to Railway

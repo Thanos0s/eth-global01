@@ -1,4 +1,4 @@
-﻿import {
+import {
   Client,
   TopicId,
   TopicMessageSubmitTransaction,
@@ -13,6 +13,7 @@ export interface HcsAuditEventPayload {
   invoiceId?: string;
   txId?: string;
   payer?: string;
+  payee?: string;
   service?: string;
   amount?: string;
   propertyId?: string;
@@ -70,14 +71,11 @@ async function submitHcsMessage(
 
   const signed = await frozen.sign(operatorKey);
   const response = await signed.execute(client);
-  const record = await response.getRecord(client);
+  const receipt = await response.getReceipt(client);
 
-  const sequenceNumber = record.receipt.topicSequenceNumber
-    ? Number(record.receipt.topicSequenceNumber)
-    : 1;
-  const consensusTimestamp = record.consensusTimestamp
-    ? record.consensusTimestamp.toDate().toISOString()
-    : new Date().toISOString();
+  const rawSeq = receipt.topicSequenceNumber ? receipt.topicSequenceNumber.toString() : "1";
+  const sequenceNumber = parseInt(rawSeq, 10) || 1;
+  const consensusTimestamp = new Date().toISOString();
   const txIdStr = response.transactionId.toString();
 
   return { sequenceNumber, consensusTimestamp, txIdStr };
