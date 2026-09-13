@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { getDb } from "./index";
 import type {
   ComplianceOptions,
@@ -1051,4 +1052,71 @@ export function listEvents(tokenId: string, limit = 100): EventRecord[] {
     .prepare("SELECT * FROM events WHERE token_id = ? ORDER BY created_at DESC, id DESC LIMIT ?")
     .all(tokenId, limit) as EventRow[];
   return rows.map(mapEvent);
+}
+
+// --- Auth Sessions ---
+
+export function createAuthSession(params: {
+  address: string;
+  role: string;
+  expiresAt: number;
+  userAgent?: string;
+  ip?: string;
+}): string {
+  const id = randomUUID();
+  getDb()
+    .prepare(
+      `INSERT INTO auth_sessions (id, address, role, issued_at, expires_at, user_agent, ip)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`
+    )
+    .run(
+      id,
+      params.address.toLowerCase(),
+      params.role,
+      Date.now(),
+      params.expiresAt,
+      params.userAgent ?? null,
+      params.ip ?? null
+    );
+  return id;
+}
+
+export function getAuthSession(
+  id: string
+): { address: string; role: string; expiresAt: number; revoked: number } | null {
+  const row = getDb()
+    .prepare("SELECT address, role, expires_at as expiresAt, revoked FROM auth_sessions WHERE id = ?")
+    .get(id) as any;
+  return row ?? null;
+}
+
+export function revokeAuthSession(id: string): void {
+  getDb().prepare("UPDATE auth_sessions SET revoked = 1 WHERE id = ?").run(id);
+}
+
+// --- Auth Nonces ---
+
+export function createAuthNonce(address: string): string {
+  const nonce = randomUUID();
+  const now = Date.now();
+  getDb()
+    .prepare(
+      `INSERT INTO auth_nonces (nonce, address, issued_at, expires_at)
+       VALUES (?, ?, ?, ?)`
+    )
+    .run(nonce, address.toLowerCase(), now, now + 5 * 60_000);
+  return nonce;
+}
+
+export function consumeAuthNonce(nonce: string, address: string): boolean {
+  const row = getDb()
+    .prepare(
+      "SELECT consumed, expires_at as expiresAt, address FROM auth_nonces WHERE nonce = ?"
+    )
+    .get(nonce) as any;
+  if (!row || row.consumed || row.expiresAt < Date.now() || row.address !== address.toLowerCase()) {
+    return false;
+  }
+  getDb().prepare("UPDATE auth_nonces SET consumed = 1 WHERE nonce = ?").run(nonce);
+  return true;
 }

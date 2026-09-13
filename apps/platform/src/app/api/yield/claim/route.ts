@@ -1,26 +1,47 @@
 import { NextRequest, NextResponse } from "next/server";
 import { insertEvent } from "@/lib/db/repo";
 import { logHcsAuditEvent } from "@/lib/hedera/hcsAudit";
+import { requireInvestor } from "@/lib/auth/middleware";
+import { checkRateLimit, getClientIp } from "@/lib/api/rateLimit";
+import { auditLog } from "@/lib/audit/logger";
+import { isDemoMode, DEMO_BANNER } from "@/lib/demo";
+
+export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
+  checkRateLimit(getClientIp(req), 60);
+
+  // If in demo mode, return visibly isolated simulation response without real execution
+  if (isDemoMode()) {
+    return NextResponse.json({
+      success: true,
+      _demo: true,
+      _notice: DEMO_BANNER,
+      status: "SIMULATED",
+      txId: null,
+      message: `${DEMO_BANNER}: Yield claim simulated locally.`,
+    });
+  }
+
+  // Production: Authenticate investor; recipient is strictly derived from session context
+  const ctx = requireInvestor(req);
+  const accountId = ctx.address;
+
   try {
     const body = await req.json();
     const {
       propertyId = "0.0.4491823",
-      accountId = "0x28a8746e75304c0780e011bed21c72cd78cd535e",
       amount = 14.8251,
     } = body;
 
     const claimAmount = Math.max(0.01, Number(amount));
-    const txId = `0.0.4491823@${Math.floor(Date.now() / 1000)}.000000000`;
-    const hashscanUrl = `https://hashscan.io/testnet/transaction/${txId}`;
 
     // Anchor verifiable payout receipt on Hedera Consensus Service
     const hcsReceipt = await logHcsAuditEvent({
       event: "RENTAL_YIELD_CLAIMED",
       propertyId,
       amount: `$${claimAmount.toFixed(4)} USD`,
-      txId,
+      txId: `0.0.4491823@${Math.floor(Date.now() / 1000)}`,
       payer: accountId,
       metadata: {
         receiver: accountId,
@@ -29,6 +50,9 @@ export async function POST(req: NextRequest) {
         claimedAt: new Date().toISOString(),
       },
     });
+
+    const txId = hcsReceipt.txId || null;
+    const hashscanUrl = hcsReceipt.hashscanUrl || null;
 
     // Persist immutable transfer event to database
     try {
@@ -50,6 +74,16 @@ export async function POST(req: NextRequest) {
     } catch (dbErr) {
       console.warn("[claim route] Could not insert event into sqlite:", dbErr);
     }
+
+    auditLog({
+      actor: accountId,
+      role: ctx.role,
+      action: "CLAIM_YIELD",
+      resource: `property:${propertyId}`,
+      status: "OK",
+      detail: { amount: claimAmount, currency: "fUSDCx" },
+      ip: getClientIp(req),
+    });
 
     return NextResponse.json({
       success: true,

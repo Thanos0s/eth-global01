@@ -1,5 +1,7 @@
-import crypto from "node:crypto";
-import { verifyTypedData, verifyMessage } from "ethers";
+﻿import crypto from "node:crypto";
+import { verifyTypedData } from "ethers";
+import { getDb } from "@/lib/db/index";
+import { ApiError } from "@/lib/api/helpers";
 
 export interface SessionPolicyConstraints {
   maxSpendHbar: number;
@@ -13,15 +15,16 @@ export interface AgentSessionRecord {
   grantor: string;
   agentId: string;
   agentAddress: string;
+  validatorContract: string;
   constraints: SessionPolicyConstraints;
   spentHbar: number;
   activeStreamsCount: number;
   nonce: number;
+  chainId: number;
   createdAt: number;
   expiresAt: number;
   signature: string;
-  signatureType: "EIP712" | "PERSONAL_SIGN" | "PRE_AUTHORIZED";
-  validatorContract: string;
+  signatureType: "EIP712";
   status: "ACTIVE" | "EXPIRED" | "REVOKED";
 }
 
@@ -29,17 +32,19 @@ export interface PolicyValidationResult {
   allowed: boolean;
   reason?: string;
   remainingHbar: number;
-  session?: AgentSessionRecord;
+  session?: AgentSessionRecord | null;
 }
 
-// Canonical addresses and EIP-712 Schema
-export const VALIDATOR_CONTRACT_ADDRESS = "0x7579C0de00000000000000000000000000007579";
-export const HERMES_AGENT_ADDRESS = "0x89205A3A3b2A69De6Dbf7f01ED13B2108B2c43e7";
+export const VALIDATOR_CONTRACT_ADDRESS =
+  process.env.SESSION_VALIDATOR_ADDRESS ?? "0x7579C0de00000000000000000000000000007579";
+export const HERMES_AGENT_ADDRESS =
+  process.env.HERMES_AGENT_ADDRESS ?? "0x89205A3A3b2A69De6Dbf7f01ED13B2108B2c43e7";
+export const DEFAULT_CHAIN_ID = Number(process.env.SESSION_CHAIN_ID ?? "84532"); // Base Sepolia
 
 export const SESSION_KEY_EIP712_DOMAIN = {
   name: "Prism8SessionValidator",
   version: "1",
-  chainId: 11155111, // Sepolia
+  chainId: DEFAULT_CHAIN_ID,
   verifyingContract: VALIDATOR_CONTRACT_ADDRESS,
 };
 
@@ -54,134 +59,51 @@ export const SESSION_KEY_EIP712_TYPES = {
   ],
 };
 
-// In-memory session registry (persists across runtime turns)
-const sessionRegistry = new Map<string, AgentSessionRecord>();
-
-// Default demo fallback session if user hasn't signed yet
-const DEFAULT_GRANTOR = "0x70997970C51812dc3A010C7d01b50e0d17dc79C8";
-const defaultSession: AgentSessionRecord = {
-  sessionId: "session_prism8_genesis_demo",
-  grantor: DEFAULT_GRANTOR,
-  agentId: "hermes-agentic-operator",
-  agentAddress: HERMES_AGENT_ADDRESS,
-  constraints: {
-    maxSpendHbar: 5.0,
-    maxFlowRateMonthlyUsd: 5000,
-    allowedActions: [
-      "ORACLE_USPS_X402",
-      "HCS_CONSENSUS_AUDIT",
-      "SUBGRAPH_HOLDER_DISCOVERY",
-      "CFA_YIELD_STREAM_START",
-      "CFA_YIELD_STREAM_ADJUST",
-      "COMPLIANCE_FREEZE",
-    ],
-    durationHours: 24,
-  },
-  spentHbar: 0.5,
-  activeStreamsCount: 1,
-  nonce: 1001,
-  createdAt: Date.now() - 3600000,
-  expiresAt: Date.now() + 82800000,
-  signature: "0x38ba6156ac3f289611f7c11f421e9c8f01b50e0d17dc79c8a9f4c3217b58a129d21e843f5451e944738590172bf4212a1c",
-  signatureType: "PRE_AUTHORIZED",
-  validatorContract: VALIDATOR_CONTRACT_ADDRESS,
-  status: "ACTIVE",
-};
-
-sessionRegistry.set(DEFAULT_GRANTOR.toLowerCase(), defaultSession);
-sessionRegistry.set(defaultSession.sessionId, defaultSession);
-
-export function getActiveSession(grantorAddress?: string): AgentSessionRecord {
-  if (grantorAddress) {
-    const found = sessionRegistry.get(grantorAddress.toLowerCase());
-    if (found && found.expiresAt > Date.now() && found.status === "ACTIVE") {
-      return found;
-    }
-  }
-  return defaultSession;
-}
-
-export interface SessionVerificationDetail {
-  verified: boolean;
-  signer: string;
-  signatureType: "EIP712" | "PERSONAL_SIGN" | "PRE_AUTHORIZED" | "INVALID";
-}
-
-export function verifySessionSignature(
-  grantor: string,
-  signature: string,
-  policyValues?: {
-    agent?: string;
-    maxSpendHbar?: number;
-    maxFlowMonthlyUsd?: number;
-    validUntil?: number;
-    nonce?: number;
-  },
-  rawMessage?: string
-): SessionVerificationDetail {
-  const expected = grantor.toLowerCase();
-
-  // 1. Try EIP-712 Typed Data Verification
-  if (policyValues) {
-    try {
-      const typedValue = {
-        grantor,
-        agent: policyValues.agent || HERMES_AGENT_ADDRESS,
-        maxSpendHbar: BigInt(Math.floor((policyValues.maxSpendHbar ?? 5.0) * 1e18)),
-        maxFlowMonthlyUsd: BigInt(policyValues.maxFlowMonthlyUsd ?? 5000),
-        validUntil: BigInt(policyValues.validUntil ?? Math.floor((Date.now() + 86400000) / 1000)),
-        nonce: BigInt(policyValues.nonce ?? 1),
-      };
-
-      const recovered = verifyTypedData(
-        SESSION_KEY_EIP712_DOMAIN,
-        SESSION_KEY_EIP712_TYPES,
-        typedValue,
-        signature
-      );
-
-      if (recovered.toLowerCase() === expected) {
-        return {
-          verified: true,
-          signer: recovered,
-          signatureType: "EIP712",
-        };
-      }
-    } catch {
-      // Fall through to test personal_sign or pre-auth
-    }
-  }
-
-  // 2. Try raw message personal_sign verification
-  if (rawMessage) {
-    try {
-      const recovered = verifyMessage(rawMessage, signature);
-      if (recovered.toLowerCase() === expected) {
-        return {
-          verified: true,
-          signer: recovered,
-          signatureType: "PERSONAL_SIGN",
-        };
-      }
-    } catch {
-      // Ignore
-    }
-  }
-
-  // 3. Fallback for demo signature
-  if (signature.startsWith("0x38ba61") || signature.length > 50) {
-    return {
-      verified: true,
-      signer: grantor,
-      signatureType: "PRE_AUTHORIZED",
-    };
-  }
-
+function mapRowToSession(row: any): AgentSessionRecord {
   return {
-    verified: false,
-    signer: "",
-    signatureType: "INVALID",
+    sessionId: row.id,
+    grantor: row.grantor,
+    agentId: "hermes-agentic-operator",
+    agentAddress: row.agent_address,
+    validatorContract: row.validator_contract,
+    constraints: {
+      maxSpendHbar: row.max_spend_hbar,
+      maxFlowRateMonthlyUsd: row.max_flow_monthly_usd,
+      allowedActions: JSON.parse(row.allowed_actions),
+      durationHours: Math.max(1, Math.round((row.expires_at - row.created_at) / 3600000)),
+    },
+    spentHbar: row.spent_hbar,
+    activeStreamsCount: row.active_streams,
+    nonce: row.nonce,
+    chainId: row.chain_id,
+    createdAt: row.created_at,
+    expiresAt: row.expires_at,
+    signature: row.signature,
+    signatureType: "EIP712",
+    status: row.status,
   };
+}
+
+export function getActiveSession(grantorAddress?: string): AgentSessionRecord | null {
+  if (!grantorAddress) return null;
+  const db = getDb();
+  const row = db
+    .prepare(
+      `SELECT * FROM agent_sessions
+       WHERE grantor = ? AND status = 'ACTIVE' AND expires_at > ?
+       ORDER BY created_at DESC LIMIT 1`
+    )
+    .get(grantorAddress.toLowerCase(), Date.now()) as any;
+
+  return row ? mapRowToSession(row) : null;
+}
+
+export function getSessionById(sessionId: string): AgentSessionRecord | null {
+  const db = getDb();
+  const row = db
+    .prepare("SELECT * FROM agent_sessions WHERE id = ?")
+    .get(sessionId) as any;
+  return row ? mapRowToSession(row) : null;
 }
 
 export function createSessionGrant(
@@ -189,8 +111,11 @@ export function createSessionGrant(
   signature: string,
   customConstraints?: Partial<SessionPolicyConstraints>,
   nonce: number = Date.now(),
-  rawMessage?: string
+  chainId: number = DEFAULT_CHAIN_ID
 ): AgentSessionRecord {
+  const db = getDb();
+  const expectedSigner = grantor.toLowerCase();
+
   const constraints: SessionPolicyConstraints = {
     maxSpendHbar: customConstraints?.maxSpendHbar ?? 5.0,
     maxFlowRateMonthlyUsd: customConstraints?.maxFlowRateMonthlyUsd ?? 5000,
@@ -207,109 +132,189 @@ export function createSessionGrant(
 
   const validUntilSec = Math.floor((Date.now() + constraints.durationHours * 3600000) / 1000);
 
-  const verification = verifySessionSignature(
-    grantor,
-    signature,
-    {
-      agent: HERMES_AGENT_ADDRESS,
-      maxSpendHbar: constraints.maxSpendHbar,
-      maxFlowMonthlyUsd: constraints.maxFlowRateMonthlyUsd,
-      validUntil: validUntilSec,
-      nonce,
-    },
-    rawMessage
-  );
-
-  const sessionId = `session_${Date.now()}_${crypto.randomBytes(4).toString("hex")}`;
-  const record: AgentSessionRecord = {
-    sessionId,
-    grantor: grantor.toLowerCase(),
-    agentId: "hermes-agentic-operator",
-    agentAddress: HERMES_AGENT_ADDRESS,
-    constraints,
-    spentHbar: 0,
-    activeStreamsCount: 0,
-    nonce,
-    createdAt: Date.now(),
-    expiresAt: Date.now() + constraints.durationHours * 3600000,
-    signature,
-    signatureType: verification.signatureType === "INVALID" ? "EIP712" : verification.signatureType,
-    validatorContract: VALIDATOR_CONTRACT_ADDRESS,
-    status: "ACTIVE",
+  // 1. Strict EIP-712 Verification
+  const domain = {
+    ...SESSION_KEY_EIP712_DOMAIN,
+    chainId,
   };
 
-  sessionRegistry.set(grantor.toLowerCase(), record);
-  sessionRegistry.set(sessionId, record);
-  return record;
+  const typedValue = {
+    grantor,
+    agent: HERMES_AGENT_ADDRESS,
+    maxSpendHbar: BigInt(Math.floor(constraints.maxSpendHbar * 1e18)),
+    maxFlowMonthlyUsd: BigInt(constraints.maxFlowRateMonthlyUsd),
+    validUntil: BigInt(validUntilSec),
+    nonce: BigInt(nonce),
+  };
+
+  let recovered: string;
+  try {
+    recovered = verifyTypedData(domain, SESSION_KEY_EIP712_TYPES, typedValue, signature);
+  } catch (err: any) {
+    throw new ApiError(`Invalid EIP-712 session signature: ${err.message || "recovery failed"}`, 400);
+  }
+
+  if (recovered.toLowerCase() !== expectedSigner) {
+    throw new ApiError("Session signature recovered address does not match grantor address", 401);
+  }
+
+  // 2. Prevent replay across policies (UNIQUE constraint check)
+  const existing = db
+    .prepare("SELECT id FROM agent_sessions WHERE grantor = ? AND nonce = ?")
+    .get(expectedSigner, nonce);
+  if (existing) {
+    throw new ApiError("Session policy nonce already used. Please increment policy nonce.", 409);
+  }
+
+  // 3. Persist to Database
+  const sessionId = `session_${Date.now()}_${crypto.randomBytes(4).toString("hex")}`;
+  const now = Date.now();
+  const expiresAt = now + constraints.durationHours * 3600000;
+
+  db.prepare(
+    `INSERT INTO agent_sessions (
+       id, grantor, agent_address, validator_contract, max_spend_hbar,
+       max_flow_monthly_usd, allowed_actions, chain_id, nonce, expires_at,
+       signature, signature_type, spent_hbar, active_streams, status, created_at
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'EIP712', 0, 0, 'ACTIVE', ?)`
+  ).run(
+    sessionId,
+    expectedSigner,
+    HERMES_AGENT_ADDRESS,
+    VALIDATOR_CONTRACT_ADDRESS,
+    constraints.maxSpendHbar,
+    constraints.maxFlowRateMonthlyUsd,
+    JSON.stringify(constraints.allowedActions),
+    chainId,
+    nonce,
+    expiresAt,
+    signature,
+    now
+  );
+
+  return getSessionById(sessionId)!;
 }
 
-export function validateSessionPolicy(
+export function validateAndSpendSession(
   sessionId: string,
   action: string,
   spendHbar: number = 0,
-  flowRateMonthly: number = 0
+  flowRateMonthly: number = 0,
+  requestNonce: string = crypto.randomUUID()
 ): PolicyValidationResult {
-  const session = sessionRegistry.get(sessionId) || defaultSession;
+  const db = getDb();
 
-  if (session.status !== "ACTIVE" || Date.now() > session.expiresAt) {
+  return db.transaction(() => {
+    const row = db
+      .prepare("SELECT * FROM agent_sessions WHERE id = ?")
+      .get(sessionId) as any;
+
+    if (!row) {
+      return {
+        allowed: false,
+        reason: "Session key record not found.",
+        remainingHbar: 0,
+        session: null,
+      };
+    }
+
+    const session = mapRowToSession(row);
+
+    if (session.status !== "ACTIVE") {
+      return {
+        allowed: false,
+        reason: `Session key is ${session.status}. Re-authorization required.`,
+        remainingHbar: 0,
+        session,
+      };
+    }
+
+    if (Date.now() > session.expiresAt) {
+      db.prepare("UPDATE agent_sessions SET status = 'EXPIRED' WHERE id = ?").run(sessionId);
+      session.status = "EXPIRED";
+      return {
+        allowed: false,
+        reason: "Session key has expired. Re-authorization required.",
+        remainingHbar: 0,
+        session,
+      };
+    }
+
+    // 1. Action allowlist check
+    if (!session.constraints.allowedActions.includes(action)) {
+      return {
+        allowed: false,
+        reason: `Cryptographic Policy Violation: Action '${action}' is not in delegated allowlist.`,
+        remainingHbar: Math.max(0, session.constraints.maxSpendHbar - session.spentHbar),
+        session,
+      };
+    }
+
+    // 2. Spend allowance check
+    const remaining = session.constraints.maxSpendHbar - session.spentHbar;
+    if (spendHbar > 0 && spendHbar > remaining) {
+      return {
+        allowed: false,
+        reason: `Budget Cap Exceeded: Requested ${spendHbar} HBAR exceeds remaining allowance (${remaining.toFixed(2)} HBAR).`,
+        remainingHbar: remaining,
+        session,
+      };
+    }
+
+    // 3. Flow rate ceiling check
+    if (
+      flowRateMonthly > 0 &&
+      flowRateMonthly > session.constraints.maxFlowRateMonthlyUsd
+    ) {
+      return {
+        allowed: false,
+        reason: `Yield Ceiling Violation: Requested monthly stream of $${flowRateMonthly} exceeds permitted maximum of $${session.constraints.maxFlowRateMonthlyUsd}.`,
+        remainingHbar: remaining,
+        session,
+      };
+    }
+
+    // 4. Request nonce replay prevention
+    const nonceRow = db
+      .prepare("SELECT nonce FROM agent_nonces WHERE session_id = ? AND nonce = ?")
+      .get(sessionId, requestNonce);
+    if (nonceRow) {
+      return {
+        allowed: false,
+        reason: "Request nonce already used. Replay detected and rejected.",
+        remainingHbar: remaining,
+        session,
+      };
+    }
+
+    // 5. Commit atomic spend and request nonce
+    db.prepare("INSERT INTO agent_nonces (session_id, nonce, used_at) VALUES (?, ?, ?)")
+      .run(sessionId, requestNonce, Date.now());
+
+    if (spendHbar > 0) {
+      db.prepare(
+        "UPDATE agent_sessions SET spent_hbar = spent_hbar + ? WHERE id = ?"
+      ).run(spendHbar, sessionId);
+
+      db.prepare(
+        "INSERT INTO agent_spend_log (session_id, action, spend_hbar, timestamp) VALUES (?, ?, ?, ?)"
+      ).run(sessionId, action, spendHbar, Date.now());
+    }
+
+    const updatedRow = db
+      .prepare("SELECT * FROM agent_sessions WHERE id = ?")
+      .get(sessionId) as any;
+    const updatedSession = mapRowToSession(updatedRow);
+
     return {
-      allowed: false,
-      reason: "Session key has expired or was revoked. Re-authorization required.",
-      remainingHbar: 0,
-      session,
+      allowed: true,
+      remainingHbar: Math.max(0, updatedSession.constraints.maxSpendHbar - updatedSession.spentHbar),
+      session: updatedSession,
     };
-  }
-
-  // 1. Check Action Whitelist
-  if (!session.constraints.allowedActions.includes(action)) {
-    return {
-      allowed: false,
-      reason: `Cryptographic Policy Violation: Action '${action}' is not in the delegated whitelist.`,
-      remainingHbar: Math.max(0, session.constraints.maxSpendHbar - session.spentHbar),
-      session,
-    };
-  }
-
-  // 2. Check Spend Budget Constraint
-  const remaining = session.constraints.maxSpendHbar - session.spentHbar;
-  if (spendHbar > 0 && spendHbar > remaining) {
-    return {
-      allowed: false,
-      reason: `Budget Cap Exceeded: Requested ${spendHbar} HBAR exceeds remaining session allowance (${remaining.toFixed(2)} HBAR).`,
-      remainingHbar: remaining,
-      session,
-    };
-  }
-
-  // 3. Check Flow Rate Ceiling Constraint
-  if (
-    flowRateMonthly > 0 &&
-    flowRateMonthly > session.constraints.maxFlowRateMonthlyUsd
-  ) {
-    return {
-      allowed: false,
-      reason: `Yield Ceiling Violation: Requested monthly stream of $${flowRateMonthly} exceeds permitted maximum of $${session.constraints.maxFlowRateMonthlyUsd}.`,
-      remainingHbar: remaining,
-      session,
-    };
-  }
-
-  return {
-    allowed: true,
-    remainingHbar: remaining - spendHbar,
-    session,
-  };
+  })();
 }
 
-export function commitSessionSpend(
-  sessionId: string,
-  spendHbar: number = 0,
-  newStreamOpened: boolean = false
-): AgentSessionRecord {
-  const session = sessionRegistry.get(sessionId) || defaultSession;
-  session.spentHbar = Number((session.spentHbar + spendHbar).toFixed(4));
-  if (newStreamOpened) {
-    session.activeStreamsCount += 1;
-  }
-  return session;
+export function revokeSession(sessionId: string): void {
+  const db = getDb();
+  db.prepare("UPDATE agent_sessions SET status = 'REVOKED' WHERE id = ?").run(sessionId);
 }

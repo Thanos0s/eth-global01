@@ -6,10 +6,21 @@ import { SCHEMA_SQL } from "./schema";
 import { serializeWorldIdProof } from "../worldid/proof";
 import { seedDatabase } from "./seed";
 
-// better-sqlite3 is synchronous and file-backed, which is perfect for a single-process
-// Next.js server holding one Hedera operator/treasury account. Not meant to scale past a
-// hackathon demo (no connection pooling / multi-instance story), see README for notes on
-// swapping this for a hosted DB in production.
+// Boot-time production environment validation: fail-closed if required secrets are missing
+if (process.env.NODE_ENV === "production" && process.env.DEMO_MODE !== "true") {
+  const REQUIRED = [
+    "HEDERA_OPERATOR_ID",
+    "HEDERA_OPERATOR_KEY",
+    "TOKENIZATION_AGENT_SECRET",
+    "OPERATOR_ADDRESSES",
+  ];
+  const missing = REQUIRED.filter((v) => !process.env[v]);
+  if (missing.length > 0) {
+    throw new Error(
+      `[boot] FATAL: Missing required production environment variables: ${missing.join(", ")}. Refusing to start.`
+    );
+  }
+}
 
 declare global {
   var __tokenizationDb: Database.Database | undefined;

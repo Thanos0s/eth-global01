@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { timingSafeEqual } from "node:crypto";
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { ZodError } from "zod";
 import { getToken } from "@/lib/db/repo";
 import type { TokenRecord } from "@/types";
@@ -20,7 +20,8 @@ export function requireToken(tokenId: string): TokenRecord {
 
 /** Agent-only endpoints are reachable through the public reverse proxy too, so MCP calls carry
  *  a per-container shared secret. This prevents a storefront visitor from invoking treasury
- *  fulfillment directly while keeping the MCP transport on loopback. */
+ *  fulfillment directly while keeping the MCP transport on loopback.
+ *  Production enforcement includes timestamp window and HMAC signature to prevent replay. */
 export function requireAgentRequest(req: Request): void {
   const expected = process.env.TOKENIZATION_AGENT_SECRET;
   if (!expected) throw new ApiError("Agent API is not configured", 503);
@@ -32,7 +33,29 @@ export function requireAgentRequest(req: Request): void {
     expectedBuffer.length !== receivedBuffer.length ||
     !timingSafeEqual(expectedBuffer, receivedBuffer)
   ) {
-    throw new ApiError("Unauthorized agent request", 401);
+    throw new ApiError("Unauthorized agent request: secret mismatch", 401);
+  }
+
+  // Enhanced HMAC signature and timestamp verification
+  const ts = req.headers.get("x-agent-timestamp");
+  const nonce = req.headers.get("x-agent-nonce");
+  const hmac = req.headers.get("x-agent-hmac");
+
+  if (ts && nonce && hmac) {
+    const tsNum = Number(ts);
+    if (!Number.isSafeInteger(tsNum) || Math.abs(Date.now() - tsNum) > 120_000) {
+      throw new ApiError("Agent request timestamp expired or outside allowed ±120s window", 401);
+    }
+    const expectedHmac = createHmac("sha256", expected)
+      .update(`${received}:${ts}:${nonce}`)
+      .digest("hex");
+    const hmacBuf = Buffer.from(hmac);
+    const expHmacBuf = Buffer.from(expectedHmac);
+    if (hmacBuf.length !== expHmacBuf.length || !timingSafeEqual(hmacBuf, expHmacBuf)) {
+      throw new ApiError("Agent request HMAC verification failed", 401);
+    }
+  } else if (process.env.NODE_ENV === "production" && process.env.DEMO_MODE !== "true") {
+    throw new ApiError("Missing required agent HMAC, timestamp, or nonce headers", 401);
   }
 }
 
@@ -71,6 +94,10 @@ export async function handleRoute(fn: () => Promise<NextResponse>): Promise<Next
 }
 
 export async function readJson<T>(req: Request): Promise<T> {
+  const cl = req.headers.get("content-length");
+  if (cl && Number(cl) > 65_536) {
+    throw new ApiError("Request payload too large (max 64 KB)", 413);
+  }
   try {
     return (await req.json()) as T;
   } catch {

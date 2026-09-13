@@ -5,15 +5,22 @@ import { reclaimViaAllowanceNow, wipeAllFungible } from "@/lib/hedera/tokenServi
 import { cancelScheduledReclaim } from "@/lib/hedera/scheduleService";
 import { reclaimEvmViaAllowance, recoverEvmBalance } from "@/lib/evm/client";
 
+import { requireOperator } from "@/lib/auth/middleware";
+import { checkRateLimit, getClientIp } from "@/lib/api/rateLimit";
+import { auditLog } from "@/lib/audit/logger";
+
 export const dynamic = "force-dynamic";
 
 /** Immediate, non-scheduled compliance reclaim: pulls the holder's entire current balance back
  *  to the treasury right now. Uses the wipe key if the token has one (works even without a
  *  holder-granted allowance), otherwise falls back to an allowance-based approved transfer. */
 export async function POST(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ tokenId: string; accountId: string }> }
 ) {
+  checkRateLimit(getClientIp(req), 20);
+  const ctx = requireOperator(req);
+
   return handleRoute(async () => {
     const { tokenId, accountId } = await params;
     const token = requireToken(tokenId);

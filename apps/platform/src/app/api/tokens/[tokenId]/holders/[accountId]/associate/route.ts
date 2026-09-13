@@ -5,6 +5,9 @@ import { isAssociated } from "@/lib/hedera/tokenService";
 import { hashscanTxUrl } from "@/lib/hedera/format";
 import { txReceiptSchema } from "@/lib/validation";
 
+import { requireInvestor } from "@/lib/auth/middleware";
+import { checkRateLimit, getClientIp } from "@/lib/api/rateLimit";
+
 export const dynamic = "force-dynamic";
 
 /** Holder associated the token to their own account client-side (wallet-signed
@@ -14,8 +17,11 @@ export async function POST(
   req: Request,
   { params }: { params: Promise<{ tokenId: string; accountId: string }> }
 ) {
+  checkRateLimit(getClientIp(req), 30);
+
   return handleRoute(async () => {
     const { tokenId, accountId } = await params;
+    requireInvestor(req, accountId);
     requireToken(tokenId);
     const { txId } = txReceiptSchema.parse(await readJson<unknown>(req));
 

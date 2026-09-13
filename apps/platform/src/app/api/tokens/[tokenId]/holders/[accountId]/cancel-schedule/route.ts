@@ -3,14 +3,20 @@ import { ApiError, handleRoute, requireToken } from "@/lib/api/helpers";
 import { getHolder, insertEvent, updateHolder } from "@/lib/db/repo";
 import { cancelScheduledReclaim } from "@/lib/hedera/scheduleService";
 
+import { requireInvestor } from "@/lib/auth/middleware";
+import { checkRateLimit, getClientIp } from "@/lib/api/rateLimit";
+
 export const dynamic = "force-dynamic";
 
 export async function POST(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ tokenId: string; accountId: string }> }
 ) {
+  checkRateLimit(getClientIp(req), 20);
+
   return handleRoute(async () => {
     const { tokenId, accountId } = await params;
+    requireInvestor(req, accountId);
     requireToken(tokenId);
     const holder = getHolder(tokenId, accountId);
     if (!holder) throw new ApiError("Holder has not registered for this token.", 404);

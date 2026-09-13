@@ -5,14 +5,21 @@ import { grantKyc, unfreezeAccount } from "@/lib/hedera/tokenService";
 import { setEvmApproved, setEvmFrozen } from "@/lib/evm/client";
 import { hasRequiredWorldIdVerification } from "@/lib/worldid/policy";
 
+import { requireOperator } from "@/lib/auth/middleware";
+import { checkRateLimit, getClientIp } from "@/lib/api/rateLimit";
+import { auditLog } from "@/lib/audit/logger";
+
 export const dynamic = "force-dynamic";
 
 /** Admin approval step: grants KYC and/or unfreezes the account, whichever compliance
  *  mechanisms this token was created with, and marks the holder WHITELISTED. */
 export async function POST(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ tokenId: string; accountId: string }> }
 ) {
+  checkRateLimit(getClientIp(req), 30);
+  const ctx = requireOperator(req);
+
   return handleRoute(async () => {
     const { tokenId, accountId } = await params;
     const token = requireToken(tokenId);
