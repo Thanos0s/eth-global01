@@ -82,9 +82,16 @@ function readResult(value: unknown): WorldIdResult {
 }
 
 function requireConfiguration() {
-  const rpId = process.env.WORLD_RP_ID;
+  const rpId =
+    process.env.WORLD_RP_ID ||
+    process.env.WORLD_APP_ID ||
+    process.env.NEXT_PUBLIC_WORLD_APP_ID;
   if (!rpId) {
-    throw new WorldProofError("WORLD_RP_ID is not configured.", 503, "world_not_configured");
+    throw new WorldProofError(
+      "WORLD_RP_ID or WORLD_APP_ID is not configured.",
+      503,
+      "world_not_configured"
+    );
   }
   return rpId;
 }
@@ -151,7 +158,7 @@ export async function verifySelfieCredential(
       "action_mismatch"
     );
   }
-  assertExpectedSignal(result, expectedSignal, ["face", "selfie"]);
+  assertExpectedSignal(result, expectedSignal, ["face", "selfie", "proof_of_human", "orb"]);
 
   const { response, payload } = await exchangeVerifiedProof(rpId, result);
   if (!response.ok) {
@@ -173,7 +180,8 @@ export async function verifySelfieCredential(
 
   const credential = payload.results?.find(
     (candidate) =>
-      candidate.success && ["face", "selfie"].includes(candidate.identifier ?? "")
+      candidate.success &&
+      ["face", "selfie", "proof_of_human", "orb"].includes(candidate.identifier ?? "")
   );
   if (!credential) {
     throw new WorldProofError(
