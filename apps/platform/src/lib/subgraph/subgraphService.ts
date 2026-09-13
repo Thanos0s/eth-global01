@@ -130,8 +130,9 @@ export async function getLiveShareholderAllocation(options?: {
   monthlyRentUsd?: number;
   maxStalenessSeconds?: number;
   customUrl?: string;
+  allowFallback?: boolean;
 }): Promise<SubgraphAllocationResult> {
-  const isDemo = isDemoMode();
+  const isDemo = isDemoMode() || Boolean(options?.allowFallback);
   const configuredUrl = options?.customUrl || getSubgraphUrl();
   const isLive = Boolean(configuredUrl && configuredUrl.startsWith("http"));
   const monthlyRent = options?.monthlyRentUsd ?? 3800;
