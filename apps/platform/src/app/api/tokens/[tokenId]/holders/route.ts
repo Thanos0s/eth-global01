@@ -3,6 +3,7 @@ import { ApiError, handleRoute, readJson, requireToken } from "@/lib/api/helpers
 import { ensureHolder, getHolder, updateHolder } from "@/lib/db/repo";
 import { registerHolderSchema } from "@/lib/validation";
 import { getAddress } from "ethers";
+import { requireInvestor } from "@/lib/auth/middleware";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +14,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ tokenId
   return handleRoute(async () => {
     const { tokenId } = await params;
     const token = requireToken(tokenId);
+    const auth = requireInvestor(req);
 
     const { accountId, evmAddress } = registerHolderSchema.parse(await readJson<unknown>(req));
     const isEvmAddress = accountId.startsWith("0x");
@@ -24,7 +26,22 @@ export async function POST(req: Request, { params }: { params: Promise<{ tokenId
         400,
       );
     }
-    const normalizedAccountId = token.blockchain === "EVM" ? getAddress(accountId) : accountId;
+
+    // Investors may only register their own authenticated address. Operators may register any supplied account.
+    if (auth.role === "investor") {
+      if (token.blockchain === "EVM" && accountId.toLowerCase() !== auth.address.toLowerCase()) {
+        throw new ApiError("Cannot act on behalf of another account identifier.", 403);
+      }
+      if (token.blockchain !== "EVM" && accountId.toLowerCase() !== auth.address.toLowerCase()) {
+        throw new ApiError("Cannot act on behalf of another account identifier.", 403);
+      }
+    }
+
+    const effectiveAccountId = auth.role === "investor" && token.blockchain === "EVM"
+      ? getAddress(auth.address)
+      : accountId;
+
+    const normalizedAccountId = token.blockchain === "EVM" ? getAddress(effectiveAccountId) : effectiveAccountId;
     ensureHolder(tokenId, normalizedAccountId, token.blockchain === "EVM" ? normalizedAccountId : evmAddress);
     if (token.blockchain === "EVM") {
       // ERC-20 balances require no HTS-style association transaction.

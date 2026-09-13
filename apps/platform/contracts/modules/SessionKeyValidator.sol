@@ -3,6 +3,7 @@ pragma solidity ^0.8.24;
 
 import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
 /**
  * @title SessionKeyValidator
@@ -14,22 +15,26 @@ import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
  */
 contract SessionKeyValidator is EIP712 {
     using ECDSA for bytes32;
+    using MessageHashUtils for bytes32;
 
     uint256 public constant MODULE_TYPE_VALIDATOR = 1;
     bytes4 public constant ERC1271_SUCCESS = 0x1626ba7e;
     bytes4 public constant ERC1271_FAILED = 0xffffffff;
 
     bytes32 public constant SESSION_POLICY_TYPEHASH = keccak256(
-        "SessionPolicy(address grantor,address agent,uint256 maxSpendHbar,uint256 maxFlowMonthlyUsd,uint256 validUntil,uint256 nonce)"
+        "SessionPolicy(address smartAccount,address sessionKey,uint256 nonce,uint256 validUntil,uint256 validAfter,address[] allowedTargets,bytes4[] allowedSelectors,uint256 maxValue,uint256 chainId)"
     );
 
     struct SessionPolicy {
-        address grantor;
-        address agent;
-        uint256 maxSpendHbar;
-        uint256 maxFlowMonthlyUsd;
-        uint256 validUntil;
+        address smartAccount;
+        address sessionKey;
         uint256 nonce;
+        uint256 validUntil;
+        uint256 validAfter;
+        address[] allowedTargets;
+        bytes4[] allowedSelectors;
+        uint256 maxValue;
+        uint256 chainId;
     }
 
     struct PackedUserOperation {
@@ -44,33 +49,39 @@ contract SessionKeyValidator is EIP712 {
         bytes signature;
     }
 
-    // Grantor -> Nonce -> Revoked status
+    // SmartAccount -> Nonce -> Revoked status
     mapping(address => mapping(uint256 => bool)) public revokedNonces;
-    // Grantor -> Agent -> Accumulated spend tracking (in base units)
+    // SmartAccount -> PolicyNonce -> Accumulated on-chain spend
+    mapping(address => mapping(uint256 => uint256)) public policySpend;
+    // Backwards compatibility: SmartAccount -> Agent -> Accumulated spend tracking
     mapping(address => mapping(address => uint256)) public accumulatedSpend;
 
     event SessionDelegated(
-        address indexed grantor,
-        address indexed agent,
+        address indexed smartAccount,
+        address indexed sessionKey,
         uint256 validUntil,
-        uint256 maxSpendHbar,
+        uint256 maxValue,
         uint256 nonce
     );
 
-    event SessionRevoked(address indexed grantor, uint256 indexed nonce);
+    event SessionRevoked(address indexed smartAccount, uint256 indexed nonce);
 
     event ActionExecuted(
-        address indexed grantor,
-        address indexed agent,
+        address indexed smartAccount,
+        address indexed sessionKey,
         bytes4 indexed selector,
         uint256 spendAmount
     );
 
+    error InvalidChainId(uint256 expected, uint256 actual);
+    error SessionNotYetValid(uint256 validAfter, uint256 currentTimestamp);
     error SessionExpired(uint256 validUntil, uint256 currentTimestamp);
-    error SessionNonceRevoked(address grantor, uint256 nonce);
+    error SessionNonceRevoked(address smartAccount, uint256 nonce);
     error InvalidSigner(address expected, address recovered);
     error UnauthorizedAgent(address expected, address actual);
     error SpendLimitExceeded(uint256 requested, uint256 remaining);
+    error TargetNotAllowed(address target);
+    error SelectorNotAllowed(bytes4 selector);
 
     constructor() EIP712("Prism8SessionValidator", "1") {}
 
@@ -91,6 +102,22 @@ contract SessionKeyValidator is EIP712 {
      */
     function onUninstall(bytes calldata) external {}
 
+    function _hashTargets(address[] memory targets) internal pure returns (bytes32) {
+        bytes32[] memory words = new bytes32[](targets.length);
+        for (uint256 i = 0; i < targets.length; i++) {
+            words[i] = bytes32(uint256(uint160(targets[i])));
+        }
+        return keccak256(abi.encodePacked(words));
+    }
+
+    function _hashSelectors(bytes4[] memory selectors) internal pure returns (bytes32) {
+        bytes32[] memory words = new bytes32[](selectors.length);
+        for (uint256 i = 0; i < selectors.length; i++) {
+            words[i] = bytes32(selectors[i]);
+        }
+        return keccak256(abi.encodePacked(words));
+    }
+
     /**
      * @notice Computes the EIP-712 digest for a given SessionPolicy.
      */
@@ -98,38 +125,229 @@ contract SessionKeyValidator is EIP712 {
         bytes32 structHash = keccak256(
             abi.encode(
                 SESSION_POLICY_TYPEHASH,
-                policy.grantor,
-                policy.agent,
-                policy.maxSpendHbar,
-                policy.maxFlowMonthlyUsd,
+                policy.smartAccount,
+                policy.sessionKey,
+                policy.nonce,
                 policy.validUntil,
-                policy.nonce
+                policy.validAfter,
+                _hashTargets(policy.allowedTargets),
+                _hashSelectors(policy.allowedSelectors),
+                policy.maxValue,
+                policy.chainId
             )
         );
         return _hashTypedDataV4(structHash);
     }
 
     /**
-     * @notice Validates a session policy signature against its grantor.
+     * @notice Validates a session policy signature against its smart account grantor.
      */
     function validateSession(
         SessionPolicy memory policy,
-        bytes memory signature
+        bytes memory grantorSignature
     ) public view returns (bool) {
+        if (policy.chainId != block.chainid) {
+            revert InvalidChainId(policy.chainId, block.chainid);
+        }
         if (block.timestamp > policy.validUntil) {
             revert SessionExpired(policy.validUntil, block.timestamp);
         }
-        if (revokedNonces[policy.grantor][policy.nonce]) {
-            revert SessionNonceRevoked(policy.grantor, policy.nonce);
+        if (block.timestamp < policy.validAfter) {
+            revert SessionNotYetValid(policy.validAfter, block.timestamp);
+        }
+        if (revokedNonces[policy.smartAccount][policy.nonce]) {
+            revert SessionNonceRevoked(policy.smartAccount, policy.nonce);
         }
 
         bytes32 digest = hashPolicy(policy);
-        address recovered = digest.recover(signature);
-        if (recovered != policy.grantor) {
-            revert InvalidSigner(policy.grantor, recovered);
+        address recovered = digest.recover(grantorSignature);
+        if (recovered != policy.smartAccount) {
+            revert InvalidSigner(policy.smartAccount, recovered);
         }
 
         return true;
+    }
+
+    function _extractBytes4(bytes memory data) internal pure returns (bytes4 s) {
+        if (data.length < 4) return bytes4(0);
+        assembly {
+            s := mload(add(data, 32))
+        }
+    }
+
+    /**
+     * @notice Parses execution parameters (target, value, selector) from UserOp callData.
+     */
+    function parseExecutionCalldata(bytes calldata callData)
+        public
+        view
+        returns (address target, uint256 value, bytes4 selector)
+    {
+        if (callData.length < 4) {
+            return (address(0), 0, bytes4(0));
+        }
+
+        bytes4 topSelector = bytes4(callData[:4]);
+
+        // 1. ERC-7579: execute(bytes32 mode, bytes executionCalldata) -> selector 0xe9ae5c53
+        if (topSelector == 0xe9ae5c53 && callData.length >= 68) {
+            (, bytes memory execCalldata) = abi.decode(callData[4:], (bytes32, bytes));
+            if (execCalldata.length >= 64) {
+                try this.decodeExecution(execCalldata) returns (address t, uint256 v, bytes memory inner) {
+                    target = t;
+                    value = v;
+                    selector = _extractBytes4(inner);
+                    return (target, value, selector);
+                } catch {
+                    // Fallback to mode inspection
+                }
+            }
+        }
+        // 2. Standard Single Call: execute(address target, uint256 value, bytes data) -> selector 0xb61d27f6
+        else if (topSelector == 0xb61d27f6 && callData.length >= 68) {
+            try this.decodeExecution(callData[4:]) returns (address t, uint256 v, bytes memory inner) {
+                target = t;
+                value = v;
+                selector = _extractBytes4(inner);
+                return (target, value, selector);
+            } catch {
+                // Fallback
+            }
+        }
+
+        // 3. Direct function call on account
+        selector = topSelector;
+        return (address(0), 0, selector);
+    }
+
+    function decodeExecution(bytes calldata data)
+        external
+        pure
+        returns (address target, uint256 value, bytes memory innerCalldata)
+    {
+        return abi.decode(data, (address, uint256, bytes));
+    }
+
+    function _isTargetAllowed(address target, address[] memory allowedTargets) internal pure returns (bool) {
+        if (allowedTargets.length == 0) return true; // Wildcard: any target allowed
+        for (uint256 i = 0; i < allowedTargets.length; i++) {
+            if (allowedTargets[i] == target) return true;
+        }
+        return false;
+    }
+
+    function _isSelectorAllowed(bytes4 selector, bytes4[] memory allowedSelectors) internal pure returns (bool) {
+        if (allowedSelectors.length == 0) return true; // Wildcard: any selector allowed
+        for (uint256 i = 0; i < allowedSelectors.length; i++) {
+            if (allowedSelectors[i] == selector) return true;
+        }
+        return false;
+    }
+
+    /**
+     * @notice Standard ERC-4337 UserOperation validation for modular accounts.
+     * Decodes session policy, grantor signature, and agent signature from userOp.signature.
+     * Enforces smartAccount binding, session key verification, target whitelist, selector whitelist,
+     * spend limit per policy nonce on-chain, expiry, and chainId.
+     */
+    function validateUserOp(
+        PackedUserOperation calldata userOp,
+        bytes32 userOpHash
+    ) external returns (uint256 validationData) {
+        // userOp.signature encodes (SessionPolicy policy, bytes grantorSignature, bytes agentSignature)
+        if (userOp.signature.length == 0) {
+            return 1; // SIG_VALIDATION_FAILED
+        }
+
+        SessionPolicy memory policy;
+        bytes memory grantorSig;
+        bytes memory agentSig;
+
+        try this.decodeSignature(userOp.signature) returns (
+            SessionPolicy memory _policy,
+            bytes memory _grantorSig,
+            bytes memory _agentSig
+        ) {
+            policy = _policy;
+            grantorSig = _grantorSig;
+            agentSig = _agentSig;
+        } catch {
+            return 1;
+        }
+
+        // 1. Validate smart account sender
+        if (userOp.sender != policy.smartAccount) {
+            return 1;
+        }
+
+        // 2. Validate chainId
+        if (policy.chainId != block.chainid) {
+            return 1;
+        }
+
+        // 3. Validate timestamp window
+        if (block.timestamp > policy.validUntil || block.timestamp < policy.validAfter) {
+            return 1;
+        }
+
+        // 4. Validate revocation
+        if (revokedNonces[policy.smartAccount][policy.nonce]) {
+            return 1;
+        }
+
+        // 5. Verify grantor signature over SessionPolicy
+        bytes32 policyDigest = hashPolicy(policy);
+        address recoveredGrantor = policyDigest.recover(grantorSig);
+        if (recoveredGrantor != policy.smartAccount) {
+            return 1;
+        }
+
+        // 6. Verify agent signature over userOpHash
+        address recoveredAgent = userOpHash.toEthSignedMessageHash().recover(agentSig);
+        if (recoveredAgent != policy.sessionKey) {
+            recoveredAgent = userOpHash.recover(agentSig);
+        }
+        if (recoveredAgent != policy.sessionKey) {
+            return 1;
+        }
+
+        // 7. Parse callData and enforce action scoping & on-chain spend tracking
+        (address target, uint256 value, bytes4 selector) = parseExecutionCalldata(userOp.callData);
+
+        if (!_isTargetAllowed(target, policy.allowedTargets)) {
+            return 1;
+        }
+
+        if (!_isSelectorAllowed(selector, policy.allowedSelectors)) {
+            return 1;
+        }
+
+        uint256 currentSpend = policySpend[policy.smartAccount][policy.nonce];
+        if (currentSpend + value > policy.maxValue) {
+            return 1;
+        }
+
+        // Track spend per policy nonce on-chain
+        policySpend[policy.smartAccount][policy.nonce] = currentSpend + value;
+        accumulatedSpend[policy.smartAccount][policy.sessionKey] += value;
+
+        emit ActionExecuted(policy.smartAccount, policy.sessionKey, selector, value);
+        return 0; // Valid execution
+    }
+
+    /**
+     * @notice Helper to safely decode signature tuple.
+     */
+    function decodeSignature(bytes calldata sig)
+        external
+        pure
+        returns (
+            SessionPolicy memory policy,
+            bytes memory grantorSignature,
+            bytes memory agentSignature
+        )
+    {
+        return abi.decode(sig, (SessionPolicy, bytes, bytes));
     }
 
     /**
@@ -137,54 +355,24 @@ contract SessionKeyValidator is EIP712 {
      */
     function checkAndRecordSpend(
         SessionPolicy calldata policy,
-        bytes calldata signature,
+        bytes calldata grantorSignature,
         uint256 spendAmount
     ) external returns (bool) {
-        validateSession(policy, signature);
+        validateSession(policy, grantorSignature);
 
-        if (msg.sender != policy.agent) {
-            revert UnauthorizedAgent(policy.agent, msg.sender);
+        if (msg.sender != policy.sessionKey) {
+            revert UnauthorizedAgent(policy.sessionKey, msg.sender);
         }
 
-        uint256 currentSpend = accumulatedSpend[policy.grantor][policy.agent];
-        if (currentSpend + spendAmount > policy.maxSpendHbar) {
-            revert SpendLimitExceeded(spendAmount, policy.maxSpendHbar - currentSpend);
+        uint256 currentSpend = policySpend[policy.smartAccount][policy.nonce];
+        if (currentSpend + spendAmount > policy.maxValue) {
+            revert SpendLimitExceeded(spendAmount, policy.maxValue - currentSpend);
         }
 
-        accumulatedSpend[policy.grantor][policy.agent] = currentSpend + spendAmount;
-        emit ActionExecuted(policy.grantor, policy.agent, msg.sig, spendAmount);
+        policySpend[policy.smartAccount][policy.nonce] = currentSpend + spendAmount;
+        accumulatedSpend[policy.smartAccount][policy.sessionKey] += spendAmount;
+        emit ActionExecuted(policy.smartAccount, policy.sessionKey, msg.sig, spendAmount);
         return true;
-    }
-
-    /**
-     * @notice Standard ERC-4337 UserOperation validation for modular accounts.
-     * Decodes session policy and signature from userOp.signature.
-     */
-    function validateUserOp(
-        PackedUserOperation calldata userOp,
-        bytes32 userOpHash
-    ) external view returns (uint256 validationData) {
-        // Decode (SessionPolicy, bytes signature) from userOp.signature
-        if (userOp.signature.length < 192) {
-            return 1; // SIG_VALIDATION_FAILED
-        }
-
-        (SessionPolicy memory policy, bytes memory sig) = abi.decode(
-            userOp.signature,
-            (SessionPolicy, bytes)
-        );
-
-        if (block.timestamp > policy.validUntil || revokedNonces[policy.grantor][policy.nonce]) {
-            return 1;
-        }
-
-        bytes32 digest = hashPolicy(policy);
-        address recovered = digest.recover(sig);
-        if (recovered != policy.grantor || userOp.sender != policy.grantor) {
-            return 1;
-        }
-
-        return 0; // Return 0 for valid signature
     }
 
     /**
@@ -201,7 +389,7 @@ contract SessionKeyValidator is EIP712 {
     }
 
     /**
-     * @notice Allows a grantor to immediately revoke a session key nonce.
+     * @notice Allows a smart account grantor to immediately revoke a session key nonce.
      */
     function revokeSessionNonce(uint256 nonce) external {
         revokedNonces[msg.sender][nonce] = true;

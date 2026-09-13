@@ -6,13 +6,22 @@ import { SCHEMA_SQL } from "./schema";
 import { serializeWorldIdProof } from "../worldid/proof";
 import { seedDatabase } from "./seed";
 
-// Boot-time production environment validation: fail-closed if required secrets are missing
-if (process.env.NODE_ENV === "production" && process.env.DEMO_MODE !== "true") {
+// Boot-time production environment validation: fail-closed if required secrets are missing at server runtime
+const isBuildPhase =
+  process.env.NEXT_PHASE === "phase-production-build" ||
+  process.env.npm_lifecycle_event === "build";
+
+if (
+  process.env.NODE_ENV === "production" &&
+  process.env.DEMO_MODE !== "true" &&
+  !isBuildPhase
+) {
   const REQUIRED = [
     "HEDERA_OPERATOR_ID",
     "HEDERA_OPERATOR_KEY",
     "TOKENIZATION_AGENT_SECRET",
     "OPERATOR_ADDRESSES",
+    "DATABASE_URL",
   ];
   const missing = REQUIRED.filter((v) => !process.env[v]);
   if (missing.length > 0) {
@@ -219,3 +228,40 @@ export function getDb(): Database.Database {
   }
   return globalThis.__tokenizationDb;
 }
+
+export { getPostgresPool, migratePostgres, checkPostgresHealth } from "./postgres";
+
+export async function getDatabaseHealth(): Promise<{
+  dialect: "postgres" | "sqlite";
+  status: "ok" | "degraded";
+  latencyMs: number;
+  error?: string;
+}> {
+  if (process.env.DATABASE_URL || process.env.POSTGRES_URL) {
+    const pg = await (await import("./postgres")).checkPostgresHealth();
+    return {
+      dialect: "postgres",
+      status: pg.ok ? "ok" : "degraded",
+      latencyMs: pg.latencyMs,
+      error: pg.error,
+    };
+  }
+
+  const start = Date.now();
+  try {
+    getDb().prepare("SELECT 1").get();
+    return {
+      dialect: "sqlite",
+      status: "ok",
+      latencyMs: Date.now() - start,
+    };
+  } catch (err: any) {
+    return {
+      dialect: "sqlite",
+      status: "degraded",
+      latencyMs: Date.now() - start,
+      error: err.message,
+    };
+  }
+}
+

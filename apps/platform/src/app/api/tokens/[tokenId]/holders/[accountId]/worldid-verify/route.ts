@@ -9,6 +9,8 @@ import { serializeWorldIdProof } from "@/lib/worldid/proof";
 import { expectedWorldAction } from "@/lib/worldid/verification";
 import type { WorldIdCheckKind } from "@/types";
 import { triggerHermesLivenessVerification } from "@/lib/hermes/livenessWebhook";
+import { requireInvestor } from "@/lib/auth/middleware";
+import { checkRateLimit, getClientIp } from "@/lib/api/rateLimit";
 
 export const dynamic = "force-dynamic";
 
@@ -21,8 +23,11 @@ export async function POST(
   req: Request,
   { params }: { params: Promise<{ tokenId: string; accountId: string }> }
 ) {
+  checkRateLimit(getClientIp(req), 30);
+
   return handleRoute(async () => {
     const { tokenId, accountId } = await params;
+    requireInvestor(req, accountId);
     const token = requireToken(tokenId);
     const holder = getHolder(tokenId, accountId);
     if (!holder) throw new ApiError("Join this token before verifying with World ID.", 404);

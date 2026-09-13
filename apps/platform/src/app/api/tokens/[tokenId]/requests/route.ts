@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { ApiError, handleRoute, readJson, requireToken } from "@/lib/api/helpers";
+import { requireInvestor } from "@/lib/auth/middleware";
 import {
   createOrReopenTokenRequest,
   getHolder,
@@ -22,6 +23,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ tokenId
     }
 
     const { accountId } = createTokenRequestSchema.parse(await readJson<unknown>(req));
+    requireInvestor(req, accountId);
     const holder = getHolder(tokenId, accountId);
     if (!holder) throw new ApiError("Join this token before requesting it.", 409);
     if (!holder.associated) throw new ApiError("Associate this token with your wallet first.", 409);

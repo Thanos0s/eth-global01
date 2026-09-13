@@ -165,20 +165,22 @@ Open `http://localhost:3000` to view the storefront, live stream dashboard, The 
 
 ### 2. Run the Verification Test Suite
 ```bash
-# 1. Test x402 Property Oracle Protocol & Discovery
-node apps/platform/scripts/test-x402-oracle.mjs
+cd apps/platform
 
-# 2. Test Smart Contracts (PropertyRegistry, YieldVault, USPSChainlinkConsumer)
-node apps/platform/scripts/test-contracts.mjs
+# Run all automated tests (Vitest 51 tests + contract verification + Subgraph)
+npm run test:all
 
-# 3. Test The Graph Subgraph Manifest, MCP Tools & API Route
-node apps/platform/scripts/test-subgraph.mjs
+# Run specific test suites
+npm run test:unit           # Core unit tests (contracts, rateLimit, outbox, sessionPolicy, auth)
+npm run test:integration    # Route auth, agent replay prevention, session validator
+npm run test:contracts      # Smart contract ABI & bytecode checks
+npm run typecheck           # Strict TypeScript typechecking (tsc --noEmit)
+npm run build               # Next.js 16 production build
 
-# 4. Test usps_chainlink MCP (Python)
-python apps/agent/mcps/usps_chainlink/test_server.py
-
-# 5. Test superfluid MCP (Python)
-python apps/agent/mcps/superfluid/test_server.py
+# Protocol verification scripts
+node scripts/test-x402-oracle.mjs
+node scripts/test-contracts.mjs
+node scripts/test-subgraph.mjs
 ```
 
 ### 3. Deploy to Railway

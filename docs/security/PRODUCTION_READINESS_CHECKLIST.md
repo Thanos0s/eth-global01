@@ -1,4 +1,4 @@
-﻿# Prism 8 Production Readiness Checklist & Deployment Gate
+# Prism 8 Production Readiness Checklist & Deployment Gate
 
 ## 1. Executive Summary
 This document serves as the formal readiness audit and gate for moving Prism 8 from testnet / demo staging into a live mainnet production environment with real capital.
@@ -33,11 +33,19 @@ This document serves as the formal readiness audit and gate for moving Prism 8 f
 - [x] **OpenZeppelin Access Control**: Migrated single-owner pattern to `AccessControl` (`OPERATOR_ROLE`, `PAUSER_ROLE`, `DEFAULT_ADMIN_ROLE`).
 - [x] **Safe Downcasting**: Verified uint96 flow rate conversions against int96 overflow bounds.
 - [x] **Compliance Events & Clawbacks**: `CompliantRwaToken.sol` emits `ApprovalUpdated`, `FreezeUpdated`, and `RecoveryExecuted` events with NatSpec documentation and a legal disclaimer.
+- [x] **ERC-7579/ERC-4337 Session Key Enforcement**: Upgraded `SessionKeyValidator.sol` with real UserOp calldata decoding, target and selector whitelisting, on-chain spend tracking per policy nonce (`policySpend`), grantor EIP-712 signature recovery, and session key `userOpHash` verification without demo fallbacks.
+
+### Pass 2 Production Hardening
+- [x] **Holder-Scoped Mutation Route Guarding**: Protected all holder mutation endpoints (`/holders`, `/requests`, `/allowance`, `/worldid-verify`, `/worldid-retry`) with `requireInvestor(req, accountId)`. Rejects unauthenticated calls with 401 and cross-account actions with 403 while permitting operators.
+- [x] **Durable Agent Nonce Replay Store**: Persistent database table `agent_request_nonces` with TTL and unique constraints; atomic consumption in `requireAgentRequest` rejecting replay attacks with 409 and expired timestamps with 401.
+- [x] **Elimination of Fake Production Data**: Removed random mirror node and RPC transaction sampling in `agent/execute/route.ts`; gated mock holders and transfers in `subgraph/route.ts` strictly under `isDemoMode()`; failed closed on HCS audit errors in live mode.
+- [x] **Production PostgreSQL Persistence Abstraction**: Implemented connection-pooled PostgreSQL adapter (`postgres.ts`) with automated migrations, fail-closed boot validation when `DATABASE_URL` is missing in production, and health check monitoring with dialect reporting.
+- [x] **Test Script Modernization**: Repaired `test-contracts.mjs` (batched freeze) and `test-subgraph.mjs` (dynamic queries); added npm script aliases (`test:unit`, `test:integration`, `test:contracts`, `test:all`).
 
 ### Resilience & Durability
 - [x] **Idempotent Outbox Pattern**: SQLite `outbox` table with `idempotency_key` preventing duplicate chain submissions.
-- [x] **Readiness & Health Endpoint**: `/api/health` checking database, Hedera mirror node, and EVM RPC latency with 3-second timeouts.
-- [x] **Automated CI**: GitHub Actions pipeline covering contract compilation, TypeScript checking, Vitest unit/integration suites, and production Next.js build.
+- [x] **Readiness & Health Endpoint**: `/api/health` checking database (reporting dialect and latency), Hedera mirror node, and EVM RPC latency with 3-second timeouts.
+- [x] **Automated CI & Test Suites**: 8 Vitest suites (51 passing unit/integration tests), contract ABI verification, and Next.js 16 production build.
 
 ---
 

@@ -2,19 +2,24 @@ import { NextResponse } from "next/server";
 import { ApiError, handleRoute, readJson, requireToken } from "@/lib/api/helpers";
 import { getWorldIdVerification } from "@/lib/db/repo";
 import { triggerHermesLivenessVerification } from "@/lib/hermes/livenessWebhook";
+import { requireInvestor } from "@/lib/auth/middleware";
+import { checkRateLimit, getClientIp } from "@/lib/api/rateLimit";
 
 export const dynamic = "force-dynamic";
 
 type RetryBody = { verificationId?: number };
 
 /** Retry only the constrained Hermes run for a proof already stored by this holder. The browser
- * cannot alter the proof, check kind, token, or account attached to the verification. */
+ *  cannot alter the proof, check kind, token, or account attached to the verification. */
 export async function POST(
   req: Request,
   { params }: { params: Promise<{ tokenId: string; accountId: string }> }
 ) {
+  checkRateLimit(getClientIp(req), 20);
+
   return handleRoute(async () => {
     const { tokenId, accountId } = await params;
+    requireInvestor(req, accountId);
     const token = requireToken(tokenId);
     if (!token.compliance.livenessEnabled || !token.compliance.worldIdSelfieCheck) {
       throw new ApiError("This token does not use recurring Selfie Check.", 409);

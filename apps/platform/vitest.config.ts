@@ -1,4 +1,4 @@
-﻿import { defineConfig } from "vitest/config";
+import { defineConfig } from "vitest/config";
 import path from "node:path";
 
 export default defineConfig({
@@ -7,6 +7,7 @@ export default defineConfig({
     environment: "node",
     include: ["src/__tests__/**/*.test.ts"],
     testTimeout: 10000,
+    fileParallelism: false,
   },
   resolve: {
     alias: {
