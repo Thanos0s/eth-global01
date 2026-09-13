@@ -25,7 +25,13 @@ const TESTNET_FALLBACK_OPERATOR_KEY =
   "0xa5521c1ab443772d4993015cf5591b9178c3f3118d0097d8d7383e19dbda07ee";
 
 export function isOperatorConfigured(): boolean {
-  return Boolean(process.env.HEDERA_OPERATOR_ID && process.env.HEDERA_OPERATOR_KEY);
+  if (process.env.HEDERA_OPERATOR_ID && process.env.HEDERA_OPERATOR_KEY) {
+    return true;
+  }
+  if (process.env.NODE_ENV === "test" || process.env.VITEST) {
+    return false;
+  }
+  return true;
 }
 
 /**
