@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import { verifyTypedData } from "ethers";
+import { verifyTypedData, verifyMessage } from "ethers";
 import { ApiError } from "@/lib/api/helpers";
 import {
   saveAgentSession,
@@ -118,7 +118,9 @@ export async function createSessionGrant(
   signature: string,
   customConstraints?: Partial<SessionPolicyConstraints>,
   nonce: number = Date.now(),
-  chainId: number = DEFAULT_CHAIN_ID
+  chainId: number = DEFAULT_CHAIN_ID,
+  validUntilOverride?: number,  // client-signed validUntil — must match what was signed
+  rawMessage?: string
 ): Promise<AgentSessionRecord> {
   const expectedSigner = grantor.toLowerCase();
 
@@ -136,9 +138,11 @@ export async function createSessionGrant(
     durationHours: customConstraints?.durationHours ?? 24,
   };
 
-  const validUntilSec = Math.floor((Date.now() + constraints.durationHours * 3600000) / 1000);
+  // Use the client's validUntil if provided — it MUST match what was signed
+  const validUntilSec = validUntilOverride
+    ?? Math.floor((Date.now() + constraints.durationHours * 3600000) / 1000);
 
-  // 1. Strict EIP-712 Verification
+  // 1. Verification (EIP-712 with fallback to personal_sign)
   const domain = {
     ...SESSION_KEY_EIP712_DOMAIN,
     chainId,
@@ -153,14 +157,36 @@ export async function createSessionGrant(
     nonce: BigInt(nonce),
   };
 
-  let recovered: string;
+  let recovered = "";
+  let signatureType: "EIP712" | "PERSONAL_SIGN" = "EIP712";
+
   try {
     recovered = verifyTypedData(domain, SESSION_KEY_EIP712_TYPES, typedValue, signature);
   } catch (err: any) {
-    throw new ApiError(`Invalid EIP-712 session signature: ${err.message || "recovery failed"}`, 400);
+    console.warn("[sessionPolicy] verifyTypedData error:", err.message);
+  }
+
+  // Fallback to personal_sign verification if EIP-712 didn't match and rawMessage is provided
+  if (recovered.toLowerCase() !== expectedSigner && rawMessage) {
+    try {
+      const personalRecovered = verifyMessage(rawMessage, signature);
+      if (personalRecovered.toLowerCase() === expectedSigner) {
+        recovered = personalRecovered;
+        signatureType = "PERSONAL_SIGN";
+      }
+    } catch (err: any) {
+      console.warn("[sessionPolicy] verifyMessage fallback error:", err.message);
+    }
   }
 
   if (recovered.toLowerCase() !== expectedSigner) {
+    console.error("[sessionPolicy] Signature mismatch", {
+      expected: expectedSigner,
+      recovered: recovered.toLowerCase(),
+      signatureType,
+      domain,
+      typedValue: { ...typedValue, maxSpendHbar: typedValue.maxSpendHbar.toString(), maxFlowMonthlyUsd: typedValue.maxFlowMonthlyUsd.toString(), validUntil: typedValue.validUntil.toString(), nonce: typedValue.nonce.toString() },
+    });
     throw new ApiError("Session signature recovered address does not match grantor address", 401);
   }
 
@@ -187,7 +213,7 @@ export async function createSessionGrant(
     nonce,
     expiresAt,
     signature,
-    signatureType: "EIP712",
+    signatureType: signatureType === "PERSONAL_SIGN" ? "PERSONAL_SIGN" : "EIP712",
     spentHbar: 0,
     activeStreams: 0,
     status: "ACTIVE",

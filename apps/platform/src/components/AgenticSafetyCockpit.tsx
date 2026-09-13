@@ -11,7 +11,7 @@ export interface AgenticSafetyCockpitProps {
 }
 
 const VALIDATOR_MODULE_ADDRESS = "0x7579C0de00000000000000000000000000007579";
-const HERMES_AGENT_ADDRESS = "0x89205A3A3b2A69De6Dbf7f01ED13B2108B2c43e7";
+const HERMES_AGENT_ADDRESS = "0x81d6652d2840973c54883d5e69a6397596236f3c";
 
 async function parseSafeJson<T = any>(res: Response): Promise<T> {
   const contentType = res.headers.get("content-type") || "";
@@ -124,14 +124,29 @@ export function AgenticSafetyCockpit({ onWorkflowComplete }: AgenticSafetyCockpi
       const nonce = Date.now();
       const validUntil = Math.floor(Date.now() / 1000) + 24 * 3600;
 
-      const domain = {
+      // Fetch EIP-712 config from server
+      const eip712Res = await fetch(`/api/agent/session?grantor=${encodeURIComponent(grantor)}`);
+      const eip712Json = await eip712Res.json();
+      const serverAgent = eip712Json.eip712?.agentAddress || HERMES_AGENT_ADDRESS;
+
+      // Detect current active chain from wallet provider so MetaMask does not reject typed data
+      let activeChainId = 11155111;
+      try {
+        const net = await provider.getNetwork();
+        activeChainId = Number(net.chainId);
+      } catch {
+        activeChainId = eip712Json.eip712?.domain?.chainId ?? 11155111;
+      }
+
+      const activeDomain = {
         name: "Prism8SessionValidator",
         version: "1",
-        chainId: 11155111,
-        verifyingContract: VALIDATOR_MODULE_ADDRESS,
+        verifyingContract: eip712Json.eip712?.validatorContract || VALIDATOR_MODULE_ADDRESS,
+        ...eip712Json.eip712?.domain,
+        chainId: activeChainId,
       };
 
-      const types = {
+      const serverTypes = eip712Json.eip712?.types ?? {
         SessionPolicy: [
           { name: "grantor", type: "address" },
           { name: "agent", type: "address" },
@@ -144,7 +159,7 @@ export function AgenticSafetyCockpit({ onWorkflowComplete }: AgenticSafetyCockpi
 
       const value = {
         grantor,
-        agent: HERMES_AGENT_ADDRESS,
+        agent: serverAgent,
         maxSpendHbar: BigInt(5 * 1e18),
         maxFlowMonthlyUsd: BigInt(5000),
         validUntil: BigInt(validUntil),
@@ -155,14 +170,14 @@ export function AgenticSafetyCockpit({ onWorkflowComplete }: AgenticSafetyCockpi
       let rawMessage: string | undefined;
 
       try {
-        // Primary: EIP-712 Structured Typed Data Signing
-        signature = await signer.signTypedData(domain, types, value);
+        // Primary: EIP-712 Structured Typed Data Signing using active domain
+        signature = await signer.signTypedData(activeDomain, serverTypes, value);
       } catch (typedErr: any) {
-        // Fallback to personal_sign if user wallet doesn't support typed data
+        // Fallback to personal_sign if wallet doesn't support typed data
         rawMessage = [
           "[Prism 8] Cryptographic Agent Session Key Delegation (ERC-7579)",
           `Grantor: ${grantor}`,
-          `Grantee Agent: ${HERMES_AGENT_ADDRESS}`,
+          `Grantee Agent: ${serverAgent}`,
           "Max Spend Cap: 5.0 HBAR equivalent",
           "Max Yield Flow: $5,000 USD / month",
           `Allowed Actions: ${policyConstraints.allowedActions.join(", ")}`,
@@ -180,6 +195,8 @@ export function AgenticSafetyCockpit({ onWorkflowComplete }: AgenticSafetyCockpi
           signature,
           constraints: policyConstraints,
           nonce,
+          chainId: activeDomain.chainId,  // send exact chainId used for signing
+          validUntil,                     // send exact validUntil used for signing
           rawMessage,
         }),
       });
