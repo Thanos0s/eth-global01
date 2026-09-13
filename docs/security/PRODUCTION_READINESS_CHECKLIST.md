@@ -1,0 +1,64 @@
+﻿# Prism 8 Production Readiness Checklist & Deployment Gate
+
+## 1. Executive Summary
+This document serves as the formal readiness audit and gate for moving Prism 8 from testnet / demo staging into a live mainnet production environment with real capital.
+
+---
+
+## 2. Controls Implemented in this Refactor (Production Hardened)
+
+### Security & Access Control
+- [x] **Role-Based Authorization Model**: Explicitly segregated roles (`public`, `investor`, `operator`, `internal agent`).
+- [x] **Operator Route Guarding**: All treasury and contract mutation routes (`/api/tokens`, `/api/evm/tokens`, `/api/tokens/[id]/pause`, `/api/tokens/[id]/holders/*`, `/api/yield/streams`, `/api/rent/simulate`) protected by `requireOperator` verifying cryptographic wallet signatures against an immutable server allowlist (`OPERATOR_ADDRESSES`).
+- [x] **Investor Scope Enforcement**: Investor mutation endpoints (`/api/yield/claim`, `/api/tokens/[id]/holders/[acct]/associate`) strictly derive the recipient account from the authenticated session context (`ctx.address`), preventing spoofed claimant parameters.
+- [x] **Internal Agent Authentication**: Constant-time comparison on shared secrets (`TOKENIZATION_AGENT_SECRET`), with timestamp freshness window (±120 seconds) and HMAC-SHA256 signature verification.
+- [x] **Rate Limiting & Payload Bounds**: Enforced 100 requests/minute per IP sliding window on mutations, and strict 64 KB JSON body size caps (`413 Payload Too Large`).
+- [x] **Audit Ledger**: Structured audit logging table (`audit_log`) in SQLite permanently recording actor, role, action, resource, IP, and timestamp for all mutations.
+
+### Cryptographic Session Policies (Hermes Agent)
+- [x] **Persistent EIP-712 Session Storage**: In-memory maps eliminated; sessions persisted in `agent_sessions` SQLite table.
+- [x] **Zero Fallback**: Hardcoded pre-authorized demo session (`0x70997970C518...`) and signature length checks (>50 chars) permanently removed.
+- [x] **Strict Domain Binding**: EIP-712 domain and type hash validation matching ERC-7579 modular account delegation.
+- [x] **Atomic Budget Accounting & Anti-Replay**: Spend deduction and per-request UUID tracking executed inside synchronous database transactions (`db.transaction()`).
+- [x] **Irrevocable Revocation**: `revokeSession` permanently flags sessions as `REVOKED`.
+
+### Demo Mode Isolation
+- [x] **Explicit Demo Gate**: `DEMO_MODE=false` by default. Local simulation returns visible disclaimer banner: `"⚠️ Simulated — not on-chain"`.
+- [x] **No Fabricated Data in Live Paths**: Removed hardcoded transaction hashes (`0.0.90-1789066142...`, `0x1e0d77de7d53...`). Production endpoints fail closed or return verifiable pending states when networks are unreachable.
+- [x] **Boot Validation**: Node process fails closed at startup if required production secrets are missing while `DEMO_MODE !== 'true'`.
+
+### Smart Contracts Hardening
+- [x] **Reserve Solvency Invariant**: `YieldVault.sol` tracks `totalObligatedPerSec` and reverts with `InsufficientReserve` if total monthly obligations would exceed deposited rental reserves.
+- [x] **Batched Emergency Freeze**: Replaced unbounded storage array loops in `emergencyFreezeAll` with `emergencyFreezeBatch(propertyId, investors)` to prevent gas bombs.
+- [x] **OpenZeppelin Access Control**: Migrated single-owner pattern to `AccessControl` (`OPERATOR_ROLE`, `PAUSER_ROLE`, `DEFAULT_ADMIN_ROLE`).
+- [x] **Safe Downcasting**: Verified uint96 flow rate conversions against int96 overflow bounds.
+- [x] **Compliance Events & Clawbacks**: `CompliantRwaToken.sol` emits `ApprovalUpdated`, `FreezeUpdated`, and `RecoveryExecuted` events with NatSpec documentation and a legal disclaimer.
+
+### Resilience & Durability
+- [x] **Idempotent Outbox Pattern**: SQLite `outbox` table with `idempotency_key` preventing duplicate chain submissions.
+- [x] **Readiness & Health Endpoint**: `/api/health` checking database, Hedera mirror node, and EVM RPC latency with 3-second timeouts.
+- [x] **Automated CI**: GitHub Actions pipeline covering contract compilation, TypeScript checking, Vitest unit/integration suites, and production Next.js build.
+
+---
+
+## 3. External Blockers & Requirements for Real-Money Mainnet
+
+Do NOT claim the platform is ready for mainnet real-estate tokenization until the following external requirements are fulfilled:
+
+### 3.1 Legal & Regulatory Compliance
+- [ ] **Securities Counsel Opinion**: Formal legal sign-off on the fractionalized asset structure under applicable jurisdictions (e.g., US SEC Reg D / Reg S, or EU MiCA compliant whitepaper).
+- [ ] **Property Title Anchoring**: Legal custody / SPV (Special Purpose Vehicle) deed recording matching on-chain tokenized supply.
+- [ ] **KYC/AML Legal Sufficiency**: Legal review of whether World ID zero-knowledge selfie/identity attestations meet FINRA/FinCEN or equivalent jurisdiction requirements.
+
+### 3.2 Key Custody & Treasury Infrastructure
+- [ ] **Hardware Security Modules (HSM) / MPC**: Migrate `HEDERA_OPERATOR_KEY` and `EVM_OPERATOR_PRIVATE_KEY` out of `.env` files into Fireblocks, AWS KMS, or Safe multi-sig.
+- [ ] **Multi-Signature Governance**: Multi-sig ownership (e.g., Gnosis Safe) for `DEFAULT_ADMIN_ROLE` on `YieldVault` and `CompliantRwaToken`.
+
+### 3.3 Smart Contract & Security Audits
+- [ ] **Independent Third-Party Audit**: Formal audit by a recognized blockchain security firm (e.g., OpenZeppelin, Spearbit, Trail of Bits) of `YieldVault.sol`, `CompliantRwaToken.sol`, and `SessionKeyValidator.sol`.
+- [ ] **ERC-4337 / ERC-7579 EntryPoint Integration Test**: Full testnet execution through a production EntryPoint (e.g., Biconomy or ZeroDev) verifying user op validation.
+
+### 3.4 Operational & Cloud Infrastructure
+- [ ] **Database Migration**: Migrate from single-file `better-sqlite3` to a managed PostgreSQL cluster (e.g., Railway Postgres or AWS RDS) with connection pooling before multi-instance horizontal scaling.
+- [ ] **Dedicated RPC Providers**: Replace public RPC endpoints (`sepolia.base.org`, public testnet mirror node) with SLA-backed infrastructure (Alchemy, QuickNode, or Hedera Portal).
+- [ ] **Production Superfluid Facilitator**: Deploy and register approved Superfluid token wrappers on Base Mainnet.
