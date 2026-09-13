@@ -19,12 +19,12 @@ export async function POST(
   { params }: { params: Promise<{ tokenId: string; accountId: string }> }
 ) {
   checkRateLimit(getClientIp(req), 20);
-  const ctx = requireOperator(req);
+  const ctx = await requireOperator(req);
 
   return handleRoute(async () => {
     const { tokenId, accountId } = await params;
-    const token = requireToken(tokenId);
-    const holder = getHolder(tokenId, accountId);
+    const token = await requireToken(tokenId);
+    const holder = await getHolder(tokenId, accountId);
     if (!holder) throw new ApiError("Holder has not registered for this token.", 404);
 
     let result;
@@ -32,7 +32,7 @@ export async function POST(
       result = token.blockchain === "EVM"
         ? await recoverEvmBalance(tokenId, accountId)
         : await wipeAllFungible(tokenId, accountId);
-      insertEvent({
+      await insertEvent({
         tokenId,
         accountId,
         type: "WIPE",
@@ -44,7 +44,7 @@ export async function POST(
       result = token.blockchain === "EVM"
         ? await reclaimEvmViaAllowance(tokenId, accountId)
         : await reclaimViaAllowanceNow(tokenId, accountId);
-      insertEvent({
+      await insertEvent({
         tokenId,
         accountId,
         type: "TRANSFER",
@@ -62,12 +62,12 @@ export async function POST(
     if (token.blockchain === "HEDERA" && holder.activeScheduleId) {
       await cancelScheduledReclaim(holder.activeScheduleId);
     }
-    updateHolder(tokenId, accountId, {
+    await updateHolder(tokenId, accountId, {
       status: "REVOKED",
       activeScheduleId: null,
       activeScheduleExpiresAt: null,
     });
 
-    return NextResponse.json({ holder: getHolder(tokenId, accountId), ...result });
+    return NextResponse.json({ holder: await getHolder(tokenId, accountId), ...result });
   });
 }

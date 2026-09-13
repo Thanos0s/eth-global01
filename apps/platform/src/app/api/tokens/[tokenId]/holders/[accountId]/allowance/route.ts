@@ -21,12 +21,12 @@ export async function POST(
 
   return handleRoute(async () => {
     const { tokenId, accountId } = await params;
-    requireInvestor(req, accountId);
-    const token = requireToken(tokenId);
+    await requireInvestor(req, accountId);
+    const token = await requireToken(tokenId);
     if (!token.compliance.livenessEnabled) {
       throw new ApiError("This token does not use recurring liveness.", 409);
     }
-    const holder = getHolder(tokenId, accountId);
+    const holder = await getHolder(tokenId, accountId);
     if (!holder || !holder.associated) {
       throw new ApiError("Associate this token before approving automatic return.", 409);
     }
@@ -44,8 +44,8 @@ export async function POST(
       throw new ApiError("The confirmed ERC-20 allowance is lower than one display token.", 409);
     }
 
-    updateHolder(tokenId, accountId, { allowanceGranted: true });
-    insertEvent({
+    await updateHolder(tokenId, accountId, { allowanceGranted: true });
+    await insertEvent({
       tokenId,
       accountId,
       type: "ALLOWANCE_APPROVE",

@@ -17,27 +17,28 @@ export const dynamic = "force-dynamic";
 export async function POST(req: Request, { params }: { params: Promise<{ tokenId: string }> }) {
   return handleRoute(async () => {
     const { tokenId } = await params;
-    const token = requireToken(tokenId);
+    const { accountId } = createTokenRequestSchema.parse(await readJson<unknown>(req));
+    await requireInvestor(req, accountId);
+
+    const token = await requireToken(tokenId);
     if (token.tokenType !== "FUNGIBLE") {
       throw new ApiError("Token requests currently support fungible tokens only.", 409);
     }
 
-    const { accountId } = createTokenRequestSchema.parse(await readJson<unknown>(req));
-    requireInvestor(req, accountId);
-    const holder = getHolder(tokenId, accountId);
+    const holder = await getHolder(tokenId, accountId);
     if (!holder) throw new ApiError("Join this token before requesting it.", 409);
     if (!holder.associated) throw new ApiError("Associate this token with your wallet first.", 409);
     if (!hasRequiredWorldIdSubmission(token, holder)) {
       throw new ApiError("Complete every required World ID check before asking Hermes to review.", 409);
     }
 
-    const { request, started, created } = createOrReopenTokenRequest(
+    const { request, started, created } = await createOrReopenTokenRequest(
       tokenId,
       accountId,
       oneDisplayTokenInBaseUnits(token.decimals)
     );
     if (started) {
-      insertEvent({
+      await insertEvent({
         tokenId,
         accountId,
         type: "TOKEN_REQUESTED",
@@ -52,10 +53,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ tokenId
     }
 
     const trigger = await triggerHermesTokenRequest(request);
-    const updated = updateTokenRequest(request.id, {
+    const updated = (await updateTokenRequest(request.id, {
       triggerStatus: trigger.triggered ? "TRIGGERED" : "FAILED",
       triggerError: trigger.error ?? null,
-    })!;
+    }))!;
 
     return NextResponse.json(
       { request: updated, triggered: trigger.triggered, warning: trigger.error },

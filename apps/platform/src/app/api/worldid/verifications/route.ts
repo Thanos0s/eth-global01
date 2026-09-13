@@ -15,13 +15,13 @@ const STATUSES = new Set<WorldIdVerificationStatus>([
 
 export async function GET(req: Request) {
   return handleRoute(async () => {
-    requireAgentRequest(req);
+    await requireAgentRequest(req);
     const query = new URL(req.url).searchParams;
     const rawStatus = query.get("status")?.toUpperCase();
     if (rawStatus && !STATUSES.has(rawStatus as WorldIdVerificationStatus)) {
       throw new ApiError("Invalid World ID verification status.", 400);
     }
-    const verifications = listWorldIdVerifications({
+    const verifications = await listWorldIdVerifications({
       status: rawStatus as WorldIdVerificationStatus | undefined,
       tokenId: query.get("tokenId") ?? undefined,
       accountId: query.get("accountId") ?? undefined,

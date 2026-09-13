@@ -242,7 +242,12 @@ export async function migratePostgres(pool: Pool): Promise<void> {
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
-    await client.query(POSTGRES_SCHEMA_SQL);
+    const statements = POSTGRES_SCHEMA_SQL.split(";")
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+    for (const stmt of statements) {
+      await client.query(stmt);
+    }
     await client.query("COMMIT");
   } catch (error) {
     await client.query("ROLLBACK");

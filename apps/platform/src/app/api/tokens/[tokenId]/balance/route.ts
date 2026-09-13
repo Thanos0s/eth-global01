@@ -24,7 +24,7 @@ function normalizeAccountId(blockchain: "EVM" | "HEDERA", accountId: string): st
 export async function GET(req: Request, { params }: { params: Promise<{ tokenId: string }> }) {
   return handleRoute(async () => {
     const { tokenId } = await params;
-    const token = requireToken(tokenId);
+    const token = await requireToken(tokenId);
     const accountId = new URL(req.url).searchParams.get("accountId");
     if (!accountId) throw new ApiError("accountId is required.", 400);
 

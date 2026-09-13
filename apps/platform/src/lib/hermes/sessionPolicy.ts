@@ -1,7 +1,14 @@
-﻿import crypto from "node:crypto";
+import crypto from "node:crypto";
 import { verifyTypedData } from "ethers";
-import { getDb } from "@/lib/db/index";
 import { ApiError } from "@/lib/api/helpers";
+import {
+  saveAgentSession,
+  getAgentSession,
+  getActiveAgentSession,
+  getAgentSessionByGrantor,
+  updateAgentSessionStatus,
+  validateAndSpendAgentSession,
+} from "@/lib/db/repo";
 
 export interface SessionPolicyConstraints {
   maxSpendHbar: number;
@@ -59,61 +66,60 @@ export const SESSION_KEY_EIP712_TYPES = {
   ],
 };
 
-function mapRowToSession(row: any): AgentSessionRecord {
+function mapDbSessionToPolicySession(row: any): AgentSessionRecord {
+  const allowedActions = Array.isArray(row.allowedActions)
+    ? row.allowedActions
+    : Array.isArray(row.allowed_actions)
+    ? row.allowed_actions
+    : typeof row.allowed_actions === "string"
+    ? JSON.parse(row.allowed_actions)
+    : [];
+
+  const createdAt = Number(row.createdAt ?? row.created_at ?? Date.now());
+  const expiresAt = Number(row.expiresAt ?? row.expires_at ?? Date.now());
+
   return {
     sessionId: row.id,
     grantor: row.grantor,
     agentId: "hermes-agentic-operator",
-    agentAddress: row.agent_address,
-    validatorContract: row.validator_contract,
+    agentAddress: row.agentAddress ?? row.agent_address,
+    validatorContract: row.validatorContract ?? row.validator_contract,
     constraints: {
-      maxSpendHbar: row.max_spend_hbar,
-      maxFlowRateMonthlyUsd: row.max_flow_monthly_usd,
-      allowedActions: JSON.parse(row.allowed_actions),
-      durationHours: Math.max(1, Math.round((row.expires_at - row.created_at) / 3600000)),
+      maxSpendHbar: Number(row.maxSpendHbar ?? row.max_spend_hbar),
+      maxFlowRateMonthlyUsd: Number(row.maxFlowMonthlyUsd ?? row.max_flow_monthly_usd),
+      allowedActions,
+      durationHours: Math.max(1, Math.round((expiresAt - createdAt) / 3600000)),
     },
-    spentHbar: row.spent_hbar,
-    activeStreamsCount: row.active_streams,
-    nonce: row.nonce,
-    chainId: row.chain_id,
-    createdAt: row.created_at,
-    expiresAt: row.expires_at,
+    spentHbar: Number(row.spentHbar ?? row.spent_hbar ?? 0),
+    activeStreamsCount: Number(row.activeStreams ?? row.active_streams ?? 0),
+    nonce: Number(row.nonce),
+    chainId: Number(row.chainId ?? row.chain_id),
+    createdAt,
+    expiresAt,
     signature: row.signature,
     signatureType: "EIP712",
     status: row.status,
   };
 }
 
-export function getActiveSession(grantorAddress?: string): AgentSessionRecord | null {
+export async function getActiveSession(grantorAddress?: string): Promise<AgentSessionRecord | null> {
   if (!grantorAddress) return null;
-  const db = getDb();
-  const row = db
-    .prepare(
-      `SELECT * FROM agent_sessions
-       WHERE grantor = ? AND status = 'ACTIVE' AND expires_at > ?
-       ORDER BY created_at DESC LIMIT 1`
-    )
-    .get(grantorAddress.toLowerCase(), Date.now()) as any;
-
-  return row ? mapRowToSession(row) : null;
+  const record = await getActiveAgentSession(grantorAddress);
+  return record ? mapDbSessionToPolicySession(record) : null;
 }
 
-export function getSessionById(sessionId: string): AgentSessionRecord | null {
-  const db = getDb();
-  const row = db
-    .prepare("SELECT * FROM agent_sessions WHERE id = ?")
-    .get(sessionId) as any;
-  return row ? mapRowToSession(row) : null;
+export async function getSessionById(sessionId: string): Promise<AgentSessionRecord | null> {
+  const record = await getAgentSession(sessionId);
+  return record ? mapDbSessionToPolicySession(record) : null;
 }
 
-export function createSessionGrant(
+export async function createSessionGrant(
   grantor: string,
   signature: string,
   customConstraints?: Partial<SessionPolicyConstraints>,
   nonce: number = Date.now(),
   chainId: number = DEFAULT_CHAIN_ID
-): AgentSessionRecord {
-  const db = getDb();
+): Promise<AgentSessionRecord> {
   const expectedSigner = grantor.toLowerCase();
 
   const constraints: SessionPolicyConstraints = {
@@ -159,162 +165,62 @@ export function createSessionGrant(
   }
 
   // 2. Prevent replay across policies (UNIQUE constraint check)
-  const existing = db
-    .prepare("SELECT id FROM agent_sessions WHERE grantor = ? AND nonce = ?")
-    .get(expectedSigner, nonce);
+  const existing = await getAgentSessionByGrantor(expectedSigner, nonce);
   if (existing) {
     throw new ApiError("Session policy nonce already used. Please increment policy nonce.", 409);
   }
 
-  // 3. Persist to Database
+  // 3. Persist to Database via repository adapter
   const sessionId = `session_${Date.now()}_${crypto.randomBytes(4).toString("hex")}`;
   const now = Date.now();
   const expiresAt = now + constraints.durationHours * 3600000;
 
-  db.prepare(
-    `INSERT INTO agent_sessions (
-       id, grantor, agent_address, validator_contract, max_spend_hbar,
-       max_flow_monthly_usd, allowed_actions, chain_id, nonce, expires_at,
-       signature, signature_type, spent_hbar, active_streams, status, created_at
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'EIP712', 0, 0, 'ACTIVE', ?)`
-  ).run(
-    sessionId,
-    expectedSigner,
-    HERMES_AGENT_ADDRESS,
-    VALIDATOR_CONTRACT_ADDRESS,
-    constraints.maxSpendHbar,
-    constraints.maxFlowRateMonthlyUsd,
-    JSON.stringify(constraints.allowedActions),
+  await saveAgentSession({
+    id: sessionId,
+    grantor: expectedSigner,
+    agentAddress: HERMES_AGENT_ADDRESS,
+    validatorContract: VALIDATOR_CONTRACT_ADDRESS,
+    maxSpendHbar: constraints.maxSpendHbar,
+    maxFlowMonthlyUsd: constraints.maxFlowRateMonthlyUsd,
+    allowedActions: constraints.allowedActions,
     chainId,
     nonce,
     expiresAt,
     signature,
-    now
-  );
+    signatureType: "EIP712",
+    spentHbar: 0,
+    activeStreams: 0,
+    status: "ACTIVE",
+    createdAt: now,
+  });
 
-  return getSessionById(sessionId)!;
+  const created = await getSessionById(sessionId);
+  return created!;
 }
 
-export function validateAndSpendSession(
+export async function validateAndSpendSession(
   sessionId: string,
   action: string,
   spendHbar: number = 0,
   flowRateMonthly: number = 0,
   requestNonce: string = crypto.randomUUID()
-): PolicyValidationResult {
-  const db = getDb();
+): Promise<PolicyValidationResult> {
+  const result = await validateAndSpendAgentSession(
+    sessionId,
+    action,
+    spendHbar,
+    flowRateMonthly,
+    requestNonce
+  );
 
-  return db.transaction(() => {
-    const row = db
-      .prepare("SELECT * FROM agent_sessions WHERE id = ?")
-      .get(sessionId) as any;
-
-    if (!row) {
-      return {
-        allowed: false,
-        reason: "Session key record not found.",
-        remainingHbar: 0,
-        session: null,
-      };
-    }
-
-    const session = mapRowToSession(row);
-
-    if (session.status !== "ACTIVE") {
-      return {
-        allowed: false,
-        reason: `Session key is ${session.status}. Re-authorization required.`,
-        remainingHbar: 0,
-        session,
-      };
-    }
-
-    if (Date.now() > session.expiresAt) {
-      db.prepare("UPDATE agent_sessions SET status = 'EXPIRED' WHERE id = ?").run(sessionId);
-      session.status = "EXPIRED";
-      return {
-        allowed: false,
-        reason: "Session key has expired. Re-authorization required.",
-        remainingHbar: 0,
-        session,
-      };
-    }
-
-    // 1. Action allowlist check
-    if (!session.constraints.allowedActions.includes(action)) {
-      return {
-        allowed: false,
-        reason: `Cryptographic Policy Violation: Action '${action}' is not in delegated allowlist.`,
-        remainingHbar: Math.max(0, session.constraints.maxSpendHbar - session.spentHbar),
-        session,
-      };
-    }
-
-    // 2. Spend allowance check
-    const remaining = session.constraints.maxSpendHbar - session.spentHbar;
-    if (spendHbar > 0 && spendHbar > remaining) {
-      return {
-        allowed: false,
-        reason: `Budget Cap Exceeded: Requested ${spendHbar} HBAR exceeds remaining allowance (${remaining.toFixed(2)} HBAR).`,
-        remainingHbar: remaining,
-        session,
-      };
-    }
-
-    // 3. Flow rate ceiling check
-    if (
-      flowRateMonthly > 0 &&
-      flowRateMonthly > session.constraints.maxFlowRateMonthlyUsd
-    ) {
-      return {
-        allowed: false,
-        reason: `Yield Ceiling Violation: Requested monthly stream of $${flowRateMonthly} exceeds permitted maximum of $${session.constraints.maxFlowRateMonthlyUsd}.`,
-        remainingHbar: remaining,
-        session,
-      };
-    }
-
-    // 4. Request nonce replay prevention
-    const nonceRow = db
-      .prepare("SELECT nonce FROM agent_nonces WHERE session_id = ? AND nonce = ?")
-      .get(sessionId, requestNonce);
-    if (nonceRow) {
-      return {
-        allowed: false,
-        reason: "Request nonce already used. Replay detected and rejected.",
-        remainingHbar: remaining,
-        session,
-      };
-    }
-
-    // 5. Commit atomic spend and request nonce
-    db.prepare("INSERT INTO agent_nonces (session_id, nonce, used_at) VALUES (?, ?, ?)")
-      .run(sessionId, requestNonce, Date.now());
-
-    if (spendHbar > 0) {
-      db.prepare(
-        "UPDATE agent_sessions SET spent_hbar = spent_hbar + ? WHERE id = ?"
-      ).run(spendHbar, sessionId);
-
-      db.prepare(
-        "INSERT INTO agent_spend_log (session_id, action, spend_hbar, timestamp) VALUES (?, ?, ?, ?)"
-      ).run(sessionId, action, spendHbar, Date.now());
-    }
-
-    const updatedRow = db
-      .prepare("SELECT * FROM agent_sessions WHERE id = ?")
-      .get(sessionId) as any;
-    const updatedSession = mapRowToSession(updatedRow);
-
-    return {
-      allowed: true,
-      remainingHbar: Math.max(0, updatedSession.constraints.maxSpendHbar - updatedSession.spentHbar),
-      session: updatedSession,
-    };
-  })();
+  return {
+    allowed: result.allowed,
+    reason: result.reason,
+    remainingHbar: result.remainingHbar,
+    session: result.session ? mapDbSessionToPolicySession(result.session) : null,
+  };
 }
 
-export function revokeSession(sessionId: string): void {
-  const db = getDb();
-  db.prepare("UPDATE agent_sessions SET status = 'REVOKED' WHERE id = ?").run(sessionId);
+export async function revokeSession(sessionId: string): Promise<void> {
+  return updateAgentSessionStatus(sessionId, "REVOKED");
 }

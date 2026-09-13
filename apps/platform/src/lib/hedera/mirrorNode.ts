@@ -11,7 +11,10 @@ type TokenAllowanceResponse = {
 
 function mirrorNodeBaseUrl(): string {
   const network = (process.env.HEDERA_NETWORK ?? "testnet").toLowerCase();
-  if (!new Set(["mainnet", "testnet", "previewnet"]).has(network)) {
+  if (network === "mainnet") {
+    throw new Error("Mainnet is rejected in testnet-only mode.");
+  }
+  if (!new Set(["testnet", "previewnet"]).has(network)) {
     throw new Error(`Unsupported Hedera network for Mirror Node: ${network}`);
   }
   return `https://${network}.mirrornode.hedera.com`;

@@ -12,8 +12,8 @@ export class ApiError extends Error {
   }
 }
 
-export function requireToken(tokenId: string): TokenRecord {
-  const token = getToken(tokenId);
+export async function requireToken(tokenId: string): Promise<TokenRecord> {
+  const token = await getToken(tokenId);
   if (!token) throw new ApiError(`Token ${tokenId} not found`, 404);
   return token;
 }
@@ -22,7 +22,7 @@ export function requireToken(tokenId: string): TokenRecord {
  *  a per-container shared secret. This prevents a storefront visitor from invoking treasury
  *  fulfillment directly while keeping the MCP transport on loopback.
  *  Production enforcement includes timestamp window and HMAC signature to prevent replay. */
-export function requireAgentRequest(req: Request): void {
+export async function requireAgentRequest(req: Request): Promise<void> {
   const expected = process.env.TOKENIZATION_AGENT_SECRET;
   if (!expected) throw new ApiError("Agent API is not configured", 503);
 
@@ -60,7 +60,7 @@ export function requireAgentRequest(req: Request): void {
   }
 
   // Durable Nonce Consumption: atomically store nonce with TTL; reject reuse with 409
-  const consumed = consumeAgentRequestNonce(nonce, tsNum + 120_000);
+  const consumed = await consumeAgentRequestNonce(nonce, tsNum + 120_000);
   if (!consumed) {
     throw new ApiError("Agent request nonce already consumed (replay rejected)", 409);
   }

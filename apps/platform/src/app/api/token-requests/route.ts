@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
   return handleRoute(async () => {
-    requireAgentRequest(req);
+    await requireAgentRequest(req);
     const rawStatus = new URL(req.url).searchParams.get("status");
     const status = rawStatus ? tokenRequestStatusSchema.parse(rawStatus) : undefined;
     return NextResponse.json({ requests: listTokenRequests(status) });

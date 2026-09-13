@@ -2,13 +2,16 @@ import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
-function hederaNetwork(): "mainnet" | "testnet" | "previewnet" {
+function hederaNetwork(): "testnet" | "previewnet" {
   const value = (
     process.env.HEDERA_NETWORK ??
     process.env.NEXT_PUBLIC_HEDERA_NETWORK ??
     "testnet"
   ).toLowerCase();
-  if (value === "mainnet" || value === "previewnet") return value;
+  if (value === "mainnet") {
+    throw new Error("Mainnet is rejected in testnet-only mode.");
+  }
+  if (value === "previewnet") return value;
   return "testnet";
 }
 

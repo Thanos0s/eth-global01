@@ -13,7 +13,7 @@ export async function POST(
   { params }: { params: Promise<{ verificationId: string }> }
 ) {
   return handleRoute(async () => {
-    requireAgentRequest(req);
+    await requireAgentRequest(req);
     const { verificationId: rawId } = await params;
     const result = await executeWorldIdVerification(parseWorldIdVerificationId(rawId));
     return NextResponse.json({ success: true, ...result });

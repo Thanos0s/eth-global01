@@ -50,8 +50,8 @@ export async function recordVerifiedSelfieLiveness(
   accountId: string,
   verifiedAt: string
 ): Promise<LivenessArmResult> {
-  const token = getToken(tokenId);
-  const holder = getHolder(tokenId, accountId);
+  const token = await getToken(tokenId);
+  const holder = await getHolder(tokenId, accountId);
   if (!token || !holder) throw new Error("The liveness token or holder no longer exists.");
   if (!token.compliance.livenessEnabled) return { mode: "disabled" };
   if (!token.compliance.worldIdSelfieCheck) {
@@ -64,14 +64,14 @@ export async function recordVerifiedSelfieLiveness(
   if (holder.lastCheckinAt !== verifiedAt) {
     if (token.blockchain === "HEDERA" && holder.activeScheduleId) {
       await cancelScheduledReclaim(holder.activeScheduleId);
-      insertEvent({
+      await insertEvent({
         tokenId,
         accountId,
         type: "CANCEL_RECLAIM",
         detail: { reason: "fresh World ID Selfie Check" },
       });
     }
-    updateHolder(tokenId, accountId, {
+    await updateHolder(tokenId, accountId, {
       lastCheckinAt: verifiedAt,
       activeScheduleId: null,
       activeScheduleExpiresAt: null,
@@ -79,7 +79,7 @@ export async function recordVerifiedSelfieLiveness(
       livenessReclaimError: null,
       livenessReclaimAttemptedAt: null,
     });
-    insertEvent({
+    await insertEvent({
       tokenId,
       accountId,
       type: "CHECKIN",
@@ -87,7 +87,7 @@ export async function recordVerifiedSelfieLiveness(
     });
   }
 
-  return armLivenessReclaim(tokenId, accountId);
+  return await armLivenessReclaim(tokenId, accountId);
 }
 
 /** Arm the on-chain safety net after a token reaches the holder. Longer policies are handled
@@ -96,8 +96,8 @@ export async function armLivenessReclaim(
   tokenId: string,
   accountId: string
 ): Promise<LivenessArmResult> {
-  const token = getToken(tokenId);
-  const holder = getHolder(tokenId, accountId);
+  const token = await getToken(tokenId);
+  const holder = await getHolder(tokenId, accountId);
   if (!token || !holder) throw new Error("The liveness token or holder no longer exists.");
   const periodSeconds = token.compliance.livenessPeriodSeconds;
   if (!token.compliance.livenessEnabled || !periodSeconds) return { mode: "disabled" };
@@ -120,11 +120,11 @@ export async function armLivenessReclaim(
 
   try {
     const schedule = await scheduleAutoReclaim(tokenId, accountId, expiresAt);
-    updateHolder(tokenId, accountId, {
+    await updateHolder(tokenId, accountId, {
       activeScheduleId: schedule.scheduleId,
       activeScheduleExpiresAt: schedule.expiresAt,
     });
-    insertEvent({
+    await insertEvent({
       tokenId,
       accountId,
       type: "SCHEDULE_RECLAIM",
@@ -162,9 +162,9 @@ export interface LivenessSweepResult {
  * Hedera state; callers cannot supply either financial parameter. */
 export async function processExpiredLiveness(): Promise<LivenessSweepResult[]> {
   const results: LivenessSweepResult[] = [];
-  for (const token of listTokens()) {
+  for (const token of await listTokens()) {
     if (!token.compliance.livenessEnabled || !token.compliance.livenessPeriodSeconds) continue;
-    for (const holder of listHolders(token.id)) {
+    for (const holder of await listHolders(token.id)) {
       if (holder.status !== "WHITELISTED" || holder.livenessState !== "EXPIRED") continue;
       // A failed approved transfer clears this flag. Wait for a new wallet-signed allowance
       // instead of submitting the same doomed Hedera transaction on every sweep.
@@ -174,15 +174,16 @@ export async function processExpiredLiveness(): Promise<LivenessSweepResult[]> {
         const expiry = new Date(holder.activeScheduleExpiresAt).getTime();
         if (Date.now() < expiry + SCHEDULE_EXECUTION_GRACE_MS) continue;
       }
-      if (!claimLivenessReclaim(token.id, holder.accountId)) continue;
+      if (!(await claimLivenessReclaim(token.id, holder.accountId))) continue;
 
       try {
-        const outcome = await reclaimExpiredHolder(token, getHolder(token.id, holder.accountId)!);
+        const liveHolder = (await getHolder(token.id, holder.accountId))!;
+        const outcome = await reclaimExpiredHolder(token, liveHolder);
         results.push({ tokenId: token.id, accountId: holder.accountId, outcome });
       } catch (error) {
         const message = error instanceof Error ? error.message : "Unknown liveness reclaim error";
         const allowanceMissing = /allowance|SPENDER_DOES_NOT_HAVE/i.test(message);
-        updateHolder(token.id, holder.accountId, {
+        await updateHolder(token.id, holder.accountId, {
           ...(allowanceMissing ? { allowanceGranted: false } : {}),
           livenessReclaimStatus: "FAILED",
           livenessReclaimError: message,
@@ -231,7 +232,7 @@ async function reclaimExpiredHolder(
     const result = token.blockchain === "EVM"
       ? await setEvmApproved(token.id, holder.accountId, false)
       : await revokeKyc(token.id, holder.accountId);
-    insertEvent({
+    await insertEvent({
       tokenId: token.id,
       accountId: holder.accountId,
       type: "REVOKE_KYC",
@@ -244,7 +245,7 @@ async function reclaimExpiredHolder(
     const result = token.blockchain === "EVM"
       ? await setEvmFrozen(token.id, holder.accountId, true)
       : await freezeAccount(token.id, holder.accountId);
-    insertEvent({
+    await insertEvent({
       tokenId: token.id,
       accountId: holder.accountId,
       type: "FREEZE",
@@ -254,7 +255,7 @@ async function reclaimExpiredHolder(
     });
   }
 
-  updateHolder(token.id, holder.accountId, {
+  await updateHolder(token.id, holder.accountId, {
     kycGranted: token.compliance.kycRequired ? false : holder.kycGranted,
     frozen: token.compliance.freezeDefault ? true : holder.frozen,
     status: "REVOKED",
@@ -263,7 +264,7 @@ async function reclaimExpiredHolder(
     livenessReclaimStatus: "COMPLETED",
     livenessReclaimError: null,
   });
-  insertEvent({
+  await insertEvent({
     tokenId: token.id,
     accountId: holder.accountId,
     type: "AUTO_RECLAIM_EXECUTED",

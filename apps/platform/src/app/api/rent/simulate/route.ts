@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  const ctx = requireOperator(req);
+  const ctx = await requireOperator(req);
 
   try {
     const body = await req.json();
@@ -36,7 +36,6 @@ export async function POST(req: NextRequest) {
       event: "TENANT_RENT_DEPOSITED",
       propertyId,
       amount: `$${amount} USD`,
-      txId: `0.0.4491823@${Math.floor(Date.now() / 1000)}`,
       metadata: {
         tenant: tenantName,
         monthlyRate: amount,

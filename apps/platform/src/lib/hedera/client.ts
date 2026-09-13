@@ -10,9 +10,26 @@ declare global {
   var __hederaOperatorId: AccountId | undefined;
 }
 
-function network(): "mainnet" | "testnet" | "previewnet" {
+export class MainnetConfigurationError extends Error {
+  constructor(
+    message = "FATAL: Mainnet configuration rejected. This release of Prism 8 is strictly testnet/previewnet only."
+  ) {
+    super(message);
+    this.name = "MainnetConfigurationError";
+  }
+}
+
+export function assertTestnetOnly(): void {
   const n = (process.env.HEDERA_NETWORK ?? "testnet").toLowerCase();
-  if (n === "mainnet" || n === "previewnet") return n;
+  if (n === "mainnet") {
+    throw new MainnetConfigurationError();
+  }
+}
+
+function network(): "testnet" | "previewnet" {
+  assertTestnetOnly();
+  const n = (process.env.HEDERA_NETWORK ?? "testnet").toLowerCase();
+  if (n === "previewnet") return "previewnet";
   return "testnet";
 }
 
@@ -21,11 +38,11 @@ export function isOperatorConfigured(): boolean {
 }
 
 function init(): void {
+  assertTestnetOnly();
   const idStr = process.env.HEDERA_OPERATOR_ID;
   const keyStr = process.env.HEDERA_OPERATOR_KEY;
   const net = network();
-  const client =
-    net === "mainnet" ? Client.forMainnet() : net === "previewnet" ? Client.forPreviewnet() : Client.forTestnet();
+  const client = net === "previewnet" ? Client.forPreviewnet() : Client.forTestnet();
 
   if (idStr && keyStr) {
     const operatorId = AccountId.fromString(idStr);

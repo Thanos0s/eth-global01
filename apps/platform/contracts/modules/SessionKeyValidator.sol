@@ -78,10 +78,12 @@ contract SessionKeyValidator is EIP712 {
     error SessionExpired(uint256 validUntil, uint256 currentTimestamp);
     error SessionNonceRevoked(address smartAccount, uint256 nonce);
     error InvalidSigner(address expected, address recovered);
+    error UnauthorizedCaller(address expected, address actual);
     error UnauthorizedAgent(address expected, address actual);
     error SpendLimitExceeded(uint256 requested, uint256 remaining);
     error TargetNotAllowed(address target);
     error SelectorNotAllowed(bytes4 selector);
+    error BatchExecutionNotPermitted();
 
     constructor() EIP712("Prism8SessionValidator", "1") {}
 
@@ -177,6 +179,7 @@ contract SessionKeyValidator is EIP712 {
 
     /**
      * @notice Parses execution parameters (target, value, selector) from UserOp callData.
+     * Rejects batch execution modes as they cannot be safely scoped under a single-action policy.
      */
     function parseExecutionCalldata(bytes calldata callData)
         public
@@ -191,7 +194,14 @@ contract SessionKeyValidator is EIP712 {
 
         // 1. ERC-7579: execute(bytes32 mode, bytes executionCalldata) -> selector 0xe9ae5c53
         if (topSelector == 0xe9ae5c53 && callData.length >= 68) {
-            (, bytes memory execCalldata) = abi.decode(callData[4:], (bytes32, bytes));
+            (bytes32 mode, bytes memory execCalldata) = abi.decode(callData[4:], (bytes32, bytes));
+            // In ERC-7579: byte 0 of mode is CallType (0x00 = single, 0x01 = batch)
+            bytes1 callType = bytes1(mode);
+            if (callType == 0x01) {
+                // Explicitly reject batch execution for session key policies
+                revert BatchExecutionNotPermitted();
+            }
+
             if (execCalldata.length >= 64) {
                 try this.decodeExecution(execCalldata) returns (address t, uint256 v, bytes memory inner) {
                     target = t;
@@ -199,7 +209,7 @@ contract SessionKeyValidator is EIP712 {
                     selector = _extractBytes4(inner);
                     return (target, value, selector);
                 } catch {
-                    // Fallback to mode inspection
+                    return (address(0), 0, bytes4(0));
                 }
             }
         }
@@ -211,7 +221,7 @@ contract SessionKeyValidator is EIP712 {
                 selector = _extractBytes4(inner);
                 return (target, value, selector);
             } catch {
-                // Fallback
+                return (address(0), 0, bytes4(0));
             }
         }
 
@@ -228,16 +238,22 @@ contract SessionKeyValidator is EIP712 {
         return abi.decode(data, (address, uint256, bytes));
     }
 
+    /**
+     * @notice Strict target check: requires explicit allowlisting. Wildcards are NOT allowed by default.
+     */
     function _isTargetAllowed(address target, address[] memory allowedTargets) internal pure returns (bool) {
-        if (allowedTargets.length == 0) return true; // Wildcard: any target allowed
+        if (allowedTargets.length == 0) return false;
         for (uint256 i = 0; i < allowedTargets.length; i++) {
             if (allowedTargets[i] == target) return true;
         }
         return false;
     }
 
+    /**
+     * @notice Strict selector check: requires explicit allowlisting. Wildcards are NOT allowed by default.
+     */
     function _isSelectorAllowed(bytes4 selector, bytes4[] memory allowedSelectors) internal pure returns (bool) {
-        if (allowedSelectors.length == 0) return true; // Wildcard: any selector allowed
+        if (allowedSelectors.length == 0) return false;
         for (uint256 i = 0; i < allowedSelectors.length; i++) {
             if (allowedSelectors[i] == selector) return true;
         }
@@ -245,18 +261,22 @@ contract SessionKeyValidator is EIP712 {
     }
 
     /**
-     * @notice Standard ERC-4337 UserOperation validation for modular accounts.
-     * Decodes session policy, grantor signature, and agent signature from userOp.signature.
-     * Enforces smartAccount binding, session key verification, target whitelist, selector whitelist,
-     * spend limit per policy nonce on-chain, expiry, and chainId.
+     * @notice Standard ERC-4337 / ERC-7579 UserOperation validation.
+     * RESTRICTION: Only the sender (modular smart account) calling its installed module during
+     * UserOp validation may call this method. Prevents external griefing / unauthorized spend consumption.
      */
     function validateUserOp(
         PackedUserOperation calldata userOp,
         bytes32 userOpHash
     ) external returns (uint256 validationData) {
+        // Enforce account caller context: only the smart account itself may invoke validateUserOp
+        if (msg.sender != userOp.sender) {
+            return 1; // SIG_VALIDATION_FAILED
+        }
+
         // userOp.signature encodes (SessionPolicy policy, bytes grantorSignature, bytes agentSignature)
         if (userOp.signature.length == 0) {
-            return 1; // SIG_VALIDATION_FAILED
+            return 1;
         }
 
         SessionPolicy memory policy;
@@ -275,7 +295,7 @@ contract SessionKeyValidator is EIP712 {
             return 1;
         }
 
-        // 1. Validate smart account sender
+        // 1. Validate smart account sender binding
         if (userOp.sender != policy.smartAccount) {
             return 1;
         }
@@ -290,16 +310,25 @@ contract SessionKeyValidator is EIP712 {
             return 1;
         }
 
-        // 4. Validate revocation
+        // 4. Validate revocation status
         if (revokedNonces[policy.smartAccount][policy.nonce]) {
             return 1;
         }
 
-        // 5. Verify grantor signature over SessionPolicy
+        // 5. Verify grantor signature over SessionPolicy EIP-712 hash
         bytes32 policyDigest = hashPolicy(policy);
         address recoveredGrantor = policyDigest.recover(grantorSig);
         if (recoveredGrantor != policy.smartAccount) {
-            return 1;
+            // For contract accounts, verify via ERC-1271
+            if (policy.smartAccount.code.length > 0) {
+                try this.check1271(policy.smartAccount, policyDigest, grantorSig) returns (bool valid) {
+                    if (!valid) return 1;
+                } catch {
+                    return 1;
+                }
+            } else {
+                return 1;
+            }
         }
 
         // 6. Verify agent signature over userOpHash
@@ -312,7 +341,16 @@ contract SessionKeyValidator is EIP712 {
         }
 
         // 7. Parse callData and enforce action scoping & on-chain spend tracking
-        (address target, uint256 value, bytes4 selector) = parseExecutionCalldata(userOp.callData);
+        address target;
+        uint256 value;
+        bytes4 selector;
+        try this.parseExecutionCalldata(userOp.callData) returns (address t, uint256 v, bytes4 s) {
+            target = t;
+            value = v;
+            selector = s;
+        } catch {
+            return 1; // Batch or malformed execution rejected
+        }
 
         if (!_isTargetAllowed(target, policy.allowedTargets)) {
             return 1;
@@ -352,6 +390,7 @@ contract SessionKeyValidator is EIP712 {
 
     /**
      * @notice Checks policy validity and records spend on-chain.
+     * Restricted to smart account or authorized sessionKey caller.
      */
     function checkAndRecordSpend(
         SessionPolicy calldata policy,
@@ -360,7 +399,7 @@ contract SessionKeyValidator is EIP712 {
     ) external returns (bool) {
         validateSession(policy, grantorSignature);
 
-        if (msg.sender != policy.sessionKey) {
+        if (msg.sender != policy.sessionKey && msg.sender != policy.smartAccount) {
             revert UnauthorizedAgent(policy.sessionKey, msg.sender);
         }
 
@@ -373,6 +412,13 @@ contract SessionKeyValidator is EIP712 {
         accumulatedSpend[policy.smartAccount][policy.sessionKey] += spendAmount;
         emit ActionExecuted(policy.smartAccount, policy.sessionKey, msg.sig, spendAmount);
         return true;
+    }
+
+    function check1271(address account, bytes32 hash, bytes calldata signature) external view returns (bool) {
+        (bool success, bytes memory ret) = account.staticcall(
+            abi.encodeWithSelector(0x1626ba7e, hash, signature)
+        );
+        return success && ret.length >= 4 && bytes4(ret) == 0x1626ba7e;
     }
 
     /**

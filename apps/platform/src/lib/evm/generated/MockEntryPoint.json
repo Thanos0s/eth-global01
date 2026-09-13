@@ -1,0 +1,221 @@
+{
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "sender",
+          "type": "address"
+        },
+        {
+          "internalType": "bytes",
+          "name": "returnData",
+          "type": "bytes"
+        }
+      ],
+      "name": "ExecutionFailed",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "sender",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "validationData",
+          "type": "uint256"
+        }
+      ],
+      "name": "ValidationFailed",
+      "type": "error"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "bytes32",
+          "name": "userOpHash",
+          "type": "bytes32"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "sender",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "paymaster",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "nonce",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "bool",
+          "name": "success",
+          "type": "bool"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "actualGasCost",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "actualGasUsed",
+          "type": "uint256"
+        }
+      ],
+      "name": "UserOperationEvent",
+      "type": "event"
+    },
+    {
+      "inputs": [
+        {
+          "components": [
+            {
+              "internalType": "address",
+              "name": "sender",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "nonce",
+              "type": "uint256"
+            },
+            {
+              "internalType": "bytes",
+              "name": "initCode",
+              "type": "bytes"
+            },
+            {
+              "internalType": "bytes",
+              "name": "callData",
+              "type": "bytes"
+            },
+            {
+              "internalType": "bytes32",
+              "name": "accountGasLimits",
+              "type": "bytes32"
+            },
+            {
+              "internalType": "uint256",
+              "name": "preVerificationGas",
+              "type": "uint256"
+            },
+            {
+              "internalType": "bytes32",
+              "name": "gasFees",
+              "type": "bytes32"
+            },
+            {
+              "internalType": "bytes",
+              "name": "paymasterAndData",
+              "type": "bytes"
+            },
+            {
+              "internalType": "bytes",
+              "name": "signature",
+              "type": "bytes"
+            }
+          ],
+          "internalType": "struct MockEntryPoint.PackedUserOperation",
+          "name": "userOp",
+          "type": "tuple"
+        }
+      ],
+      "name": "getUserOpHash",
+      "outputs": [
+        {
+          "internalType": "bytes32",
+          "name": "",
+          "type": "bytes32"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "components": [
+            {
+              "internalType": "address",
+              "name": "sender",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "nonce",
+              "type": "uint256"
+            },
+            {
+              "internalType": "bytes",
+              "name": "initCode",
+              "type": "bytes"
+            },
+            {
+              "internalType": "bytes",
+              "name": "callData",
+              "type": "bytes"
+            },
+            {
+              "internalType": "bytes32",
+              "name": "accountGasLimits",
+              "type": "bytes32"
+            },
+            {
+              "internalType": "uint256",
+              "name": "preVerificationGas",
+              "type": "uint256"
+            },
+            {
+              "internalType": "bytes32",
+              "name": "gasFees",
+              "type": "bytes32"
+            },
+            {
+              "internalType": "bytes",
+              "name": "paymasterAndData",
+              "type": "bytes"
+            },
+            {
+              "internalType": "bytes",
+              "name": "signature",
+              "type": "bytes"
+            }
+          ],
+          "internalType": "struct MockEntryPoint.PackedUserOperation[]",
+          "name": "ops",
+          "type": "tuple[]"
+        },
+        {
+          "internalType": "address payable",
+          "name": "beneficiary",
+          "type": "address"
+        }
+      ],
+      "name": "handleOps",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "stateMutability": "payable",
+      "type": "receive"
+    }
+  ],
+  "bytecode": "0x6080604052348015600e575f5ffd5b506107a98061001c5f395ff3fe60806040526004361061002b575f3560e01c806322cdde4c14610036578063765e827f14610067575f5ffd5b3661003257005b5f5ffd5b348015610041575f5ffd5b5061005561005036600461041b565b610088565b60405190815260200160405180910390f35b348015610072575f5ffd5b50610086610081366004610471565b6101a0565b005b5f6100966020830183610503565b60208301356100a8604085018561051e565b6040516100b6929190610568565b6040519081900390206100cc606086018661051e565b6040516100da929190610568565b604051908190039020608086013560a087013560c08801356100ff60e08a018a61051e565b60405161010d929190610568565b604080519182900382206001600160a01b0390991660208301528101969096526060860194909452608085019290925260a084015260c083015260e08201526101008101919091526101200160408051601f198184030181528282528051602091820120908301523090820152466060820152608001604051602081830303815290604052805190602001209050919050565b5f5b828110156103c557368484838181106101bd576101bd610577565b90506020028101906101cf919061058b565b90505f6101db82610088565b90505f6101eb6020840184610503565b6001600160a01b03166319822f7c84845f6040518463ffffffff1660e01b815260040161021a93929190610614565b6020604051808303815f875af1158015610236573d5f5f3e3d5ffd5b505050506040513d601f19601f8201168201806040525081019061025a9190610718565b905080156102a05761026f6020840184610503565b60405163a175e5cb60e01b81526001600160a01b039091166004820152602481018290526044015b60405180910390fd5b5f806102af6020860186610503565b6001600160a01b03166102c5606087018761051e565b6040516102d3929190610568565b5f604051808303815f865af19150503d805f811461030c576040519150601f19603f3d011682016040523d82523d5f602084013e610311565b606091505b509150915081610344576103286020860186610503565b8160405163feca99cb60e01b815260040161029792919061072f565b5f6103526020870187610503565b6001600160a01b0316857f49628fd1471006c1482da88028e9ce4dbb080b815c9b0344d39e5a8e6ec1419f886020013560015f5f6040516103ac949392919093845291151560208401526040830152606082015260800190565b60405180910390a45050600190930192506101a2915050565b506001600160a01b038116158015906103dd57505f47115b15610416576040516001600160a01b038216904780156108fc02915f818181858888f19350505050158015610414573d5f5f3e3d5ffd5b505b505050565b5f6020828403121561042b575f5ffd5b813567ffffffffffffffff811115610441575f5ffd5b82016101208185031215610453575f5ffd5b9392505050565b6001600160a01b038116811461046e575f5ffd5b50565b5f5f5f60408486031215610483575f5ffd5b833567ffffffffffffffff811115610499575f5ffd5b8401601f810186136104a9575f5ffd5b803567ffffffffffffffff8111156104bf575f5ffd5b8660208260051b84010111156104d3575f5ffd5b6020918201945092508401356104e88161045a565b809150509250925092565b80356104fe8161045a565b919050565b5f60208284031215610513575f5ffd5b81356104538161045a565b5f5f8335601e19843603018112610533575f5ffd5b83018035915067ffffffffffffffff82111561054d575f5ffd5b602001915036819003821315610561575f5ffd5b9250929050565b818382375f9101908152919050565b634e487b7160e01b5f52603260045260245ffd5b5f823561011e198336030181126105a0575f5ffd5b9190910192915050565b5f5f8335601e198436030181126105bf575f5ffd5b830160208101925035905067ffffffffffffffff8111156105de575f5ffd5b803603821315610561575f5ffd5b81835281816020850137505f828201602090810191909152601f909101601f19169091010190565b6060815261063560608201610628866104f3565b6001600160a01b03169052565b602084013560808201525f61064d60408601866105aa565b61012060a0850152610664610180850182846105ec565b91505061067460608701876105aa565b848303605f190160c086015261068b8382846105ec565b608089013560e08781019190915260a08a013561010088015260c08a01356101208801529093506106c1925088019050876105aa565b848303605f19016101408601526106d98382846105ec565b925050506106eb6101008701876105aa565b848303605f19016101608601526107038382846105ec565b60208601979097525050505060400152919050565b5f60208284031215610728575f5ffd5b5051919050565b60018060a01b0383168152604060208201525f82518060408401528060208501606085015e5f606082850101526060601f19601f830116840101915050939250505056fea2646970667358221220c834dcf75c5e267a05df4c90fd6e90bcd4e1dc42284bbeb73e5df5b2eec620a064736f6c634300081e0033"
+}

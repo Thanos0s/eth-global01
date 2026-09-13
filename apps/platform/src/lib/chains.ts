@@ -3,9 +3,14 @@ import type { Blockchain, TokenNetwork, TokenRecord } from "@/types";
 export const SEPOLIA_CHAIN_ID = 11155111;
 export const SEPOLIA_CHAIN_ID_HEX = "0xaa36a7";
 
-export function configuredHederaNetwork(): "mainnet" | "testnet" | "previewnet" {
+export function configuredHederaNetwork(): "testnet" | "previewnet" {
   const value = (process.env.HEDERA_NETWORK ?? "testnet").toLowerCase();
-  return value === "mainnet" || value === "previewnet" ? value : "testnet";
+  if (value === "mainnet") {
+    throw new Error(
+      "FATAL: Mainnet configuration rejected. This release of Prism 8 is strictly testnet/previewnet only."
+    );
+  }
+  return value === "previewnet" ? "previewnet" : "testnet";
 }
 
 export function tokenExplorerUrl(
@@ -13,17 +18,21 @@ export function tokenExplorerUrl(
   network: TokenNetwork,
   identifier: string
 ): string {
+  if (network === "mainnet") {
+    throw new Error("Mainnet explorer URLs are rejected in testnet-only mode.");
+  }
   if (blockchain === "EVM") {
-    const origin = network === "sepolia" ? "https://sepolia.etherscan.io" : "https://etherscan.io";
-    return `${origin}/token/${identifier}`;
+    return `https://sepolia.etherscan.io/token/${identifier}`;
   }
   return `https://hashscan.io/${network}/token/${identifier}`;
 }
 
 export function transactionExplorerUrl(token: Pick<TokenRecord, "blockchain" | "network">, txId: string): string {
+  if (token.network === "mainnet") {
+    throw new Error("Mainnet explorer URLs are rejected in testnet-only mode.");
+  }
   if (token.blockchain === "EVM") {
-    const origin = token.network === "sepolia" ? "https://sepolia.etherscan.io" : "https://etherscan.io";
-    return `${origin}/tx/${txId}`;
+    return `https://sepolia.etherscan.io/tx/${txId}`;
   }
   return `https://hashscan.io/${token.network}/transaction/${encodeURIComponent(txId)}`;
 }

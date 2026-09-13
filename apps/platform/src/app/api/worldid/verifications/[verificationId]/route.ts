@@ -14,7 +14,7 @@ export async function GET(
   { params }: { params: Promise<{ verificationId: string }> }
 ) {
   return handleRoute(async () => {
-    requireAgentRequest(req);
+    await requireAgentRequest(req);
     const { verificationId: rawId } = await params;
     const verification = getWorldIdVerification(parseWorldIdVerificationId(rawId));
     if (!verification) throw new ApiError(`World ID verification ${rawId} not found`, 404);

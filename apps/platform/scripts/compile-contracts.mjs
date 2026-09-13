@@ -13,14 +13,27 @@ const targetFiles = [
   "YieldVault.sol",
   "USPSChainlinkConsumer.sol",
   "modules/SessionKeyValidator.sol",
+  "test/MockEntryPoint.sol",
+  "test/MockModularAccount.sol",
+  "test/MockTarget.sol",
+  "test/CanonicalEntryPoint.sol",
 ];
 
 function findImports(importPath) {
-  const resolved = importPath.startsWith("@")
-    ? path.join(root, "node_modules", importPath)
-    : path.join(contractsDir, importPath);
+  let resolved;
+  if (importPath.startsWith("@")) {
+    resolved = path.join(root, "node_modules", importPath);
+  } else if (fs.existsSync(path.join(contractsDir, importPath))) {
+    resolved = path.join(contractsDir, importPath);
+  } else if (fs.existsSync(path.join(root, "node_modules", "@account-abstraction", "contracts", "core", importPath))) {
+    resolved = path.join(root, "node_modules", "@account-abstraction", "contracts", "core", importPath);
+  } else if (fs.existsSync(path.join(root, "node_modules", "@account-abstraction", "contracts", importPath.replace(/^\.\.\//, "")))) {
+    resolved = path.join(root, "node_modules", "@account-abstraction", "contracts", importPath.replace(/^\.\.\//, ""));
+  } else {
+    resolved = path.join(contractsDir, importPath);
+  }
   try {
-    return { contents: fs.readFileSync(resolved, "utf8") };
+    return { contents: fs.readFileSync(resolved, "utf8").replace(/^\uFEFF/, "") };
   } catch (error) {
     return { error: `Unable to read ${importPath}: ${error.message}` };
   }

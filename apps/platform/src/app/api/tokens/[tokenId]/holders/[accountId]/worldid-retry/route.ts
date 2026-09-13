@@ -19,8 +19,8 @@ export async function POST(
 
   return handleRoute(async () => {
     const { tokenId, accountId } = await params;
-    requireInvestor(req, accountId);
-    const token = requireToken(tokenId);
+    await requireInvestor(req, accountId);
+    const token = await requireToken(tokenId);
     if (!token.compliance.livenessEnabled || !token.compliance.worldIdSelfieCheck) {
       throw new ApiError("This token does not use recurring Selfie Check.", 409);
     }
@@ -29,7 +29,7 @@ export async function POST(
     if (!Number.isSafeInteger(verificationId) || !verificationId || verificationId < 1) {
       throw new ApiError("A valid World ID verification id is required.", 400);
     }
-    const verification = getWorldIdVerification(verificationId);
+    const verification = await getWorldIdVerification(verificationId);
     if (
       !verification ||
       verification.tokenId !== tokenId ||

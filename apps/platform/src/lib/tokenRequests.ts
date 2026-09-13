@@ -54,7 +54,7 @@ function eligibilityProblem(token: TokenRecord, holder: HolderRecord | null): st
 /** The amount and destination come exclusively from the stored request. The MCP tool accepts
  *  only the request id, so an LLM cannot alter either value. */
 export async function fulfillStoredTokenRequest(requestId: number): Promise<TokenRequestRecord> {
-  const request = getTokenRequest(requestId);
+  const request = await getTokenRequest(requestId);
   if (!request) throw new ApiError(`Token request ${requestId} not found`, 404);
   if (request.status === "FULFILLED") return request;
   if (request.status === "REJECTED") throw new ApiError("This request has already been rejected.", 409);
@@ -62,9 +62,9 @@ export async function fulfillStoredTokenRequest(requestId: number): Promise<Toke
     throw new ApiError("This request is already being processed.", 409);
   }
 
-  const token = getToken(request.tokenId);
+  const token = await getToken(request.tokenId);
   if (!token) throw new ApiError(`Token ${request.tokenId} not found`, 404);
-  const holder = getHolder(request.tokenId, request.accountId);
+  const holder = await getHolder(request.tokenId, request.accountId);
   const problem = eligibilityProblem(token, holder);
   if (problem) throw new ApiError(problem, 409);
 
@@ -73,7 +73,7 @@ export async function fulfillStoredTokenRequest(requestId: number): Promise<Toke
     throw new ApiError("The stored request amount is invalid.", 409);
   }
 
-  const claimed = claimTokenRequest(requestId);
+  const claimed = await claimTokenRequest(requestId);
   if (!claimed) throw new ApiError("This request was claimed by another Hermes run.", 409);
 
   const requestedAmount = BigInt(claimed.amountBaseUnits);
@@ -85,14 +85,14 @@ export async function fulfillStoredTokenRequest(requestId: number): Promise<Toke
   } catch (error) {
     // Balance queries are read-only, so a failed query is always safe to retry.
     const message = error instanceof Error ? error.message : "Unknown Hedera balance query error";
-    updateTokenRequest(requestId, { status: "PENDING", processingError: message });
+    await updateTokenRequest(requestId, { status: "PENDING", processingError: message });
     throw error;
   }
 
   if (treasuryBalance < requestedAmount) {
     if (!token.keys.supply) {
       const message = "The treasury does not have enough tokens and this token has no supply key.";
-      updateTokenRequest(requestId, { status: "PENDING", processingError: message });
+      await updateTokenRequest(requestId, { status: "PENDING", processingError: message });
       throw new ApiError(message, 409);
     }
 
@@ -106,16 +106,16 @@ export async function fulfillStoredTokenRequest(requestId: number): Promise<Toke
       const message = error instanceof Error ? error.message : "Unknown Hedera mint error";
       if (error instanceof ReceiptStatusError) {
         // A failed consensus receipt proves the mint did not happen, so retrying is safe.
-        updateTokenRequest(requestId, { status: "PENDING", processingError: message });
+        await updateTokenRequest(requestId, { status: "PENDING", processingError: message });
       } else {
         // A transport failure after submission is ambiguous. Keep the request reserved so a
         // retry cannot accidentally mint the same shortfall twice.
-        updateTokenRequest(requestId, { processingError: message });
+        await updateTokenRequest(requestId, { processingError: message });
       }
       throw error;
     }
 
-    insertEvent({
+    await insertEvent({
       tokenId: claimed.tokenId,
       type: "TOKEN_MINTED",
       detail: {
@@ -137,22 +137,22 @@ export async function fulfillStoredTokenRequest(requestId: number): Promise<Toke
     const message = error instanceof Error ? error.message : "Unknown Hedera transfer error";
     if (error instanceof ReceiptStatusError) {
       // A non-success consensus receipt proves no transfer occurred, so retrying is safe.
-      updateTokenRequest(requestId, { status: "PENDING", processingError: message });
+      await updateTokenRequest(requestId, { status: "PENDING", processingError: message });
     } else {
       // A timeout/transport failure can be ambiguous: Hedera may have accepted the transaction
       // even if the receipt never reached us. Keep it reserved rather than risk a double send.
-      updateTokenRequest(requestId, { processingError: message });
+      await updateTokenRequest(requestId, { processingError: message });
     }
     throw error;
   }
 
-  const fulfilled = updateTokenRequest(requestId, {
+  const fulfilled = (await updateTokenRequest(requestId, {
     status: "FULFILLED",
     fulfillmentTxId: result.txId,
     fulfillmentHashscanUrl: result.hashscanUrl,
     processingError: null,
-  })!;
-  insertEvent({
+  }))!;
+  await insertEvent({
     tokenId: claimed.tokenId,
     accountId: claimed.accountId,
     type: "TOKEN_REQUEST_FULFILLED",
@@ -168,17 +168,17 @@ export async function fulfillStoredTokenRequest(requestId: number): Promise<Toke
   return fulfilled;
 }
 
-export function rejectStoredTokenRequest(requestId: number, reason: string): TokenRequestRecord {
-  const existing = getTokenRequest(requestId);
+export async function rejectStoredTokenRequest(requestId: number, reason: string): Promise<TokenRequestRecord> {
+  const existing = await getTokenRequest(requestId);
   if (!existing) throw new ApiError(`Token request ${requestId} not found`, 404);
   if (existing.status === "REJECTED") return existing;
   if (existing.status !== "PENDING") {
     throw new ApiError(`Cannot reject a ${existing.status.toLowerCase()} request.`, 409);
   }
 
-  const rejected = rejectPendingTokenRequest(requestId, reason);
+  const rejected = await rejectPendingTokenRequest(requestId, reason);
   if (!rejected) throw new ApiError("This request changed while Hermes was reviewing it.", 409);
-  insertEvent({
+  await insertEvent({
     tokenId: rejected.tokenId,
     accountId: rejected.accountId,
     type: "TOKEN_REQUEST_REJECTED",

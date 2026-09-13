@@ -29,8 +29,8 @@ export type WorldIdExecutionResult = {
 async function applyVerifiedCheck(
   verification: WorldIdVerificationRecord
 ): Promise<HolderRecord> {
-  const token = getToken(verification.tokenId);
-  const holder = getHolder(verification.tokenId, verification.accountId);
+  const token = await getToken(verification.tokenId);
+  const holder = await getHolder(verification.tokenId, verification.accountId);
   if (!token || !holder) {
     throw new ApiError("The token or holder for this World ID verification no longer exists.", 404);
   }
@@ -53,7 +53,7 @@ async function applyVerifiedCheck(
     (!token.compliance.worldIdSelfieCheck || !!selfieVerifiedAt) &&
     (!identityRequired || !!identityVerifiedAt);
 
-  updateHolder(verification.tokenId, verification.accountId, {
+  await updateHolder(verification.tokenId, verification.accountId, {
     worldIdSelfieVerifiedAt: selfieVerifiedAt,
     worldIdIdentityVerifiedAt: identityVerifiedAt,
     worldIdVerifiedAt: allRequiredChecksPassed ? verification.verifiedAt : null,
@@ -65,7 +65,7 @@ async function applyVerifiedCheck(
       verification.verifiedAt
     );
   }
-  return getHolder(verification.tokenId, verification.accountId)!;
+  return (await getHolder(verification.tokenId, verification.accountId))!;
 }
 
 /** Execute the one trusted World API exchange for a queued proof. The caller (World ID MCP)
@@ -73,10 +73,10 @@ async function applyVerifiedCheck(
 export async function executeWorldIdVerification(
   id: number
 ): Promise<WorldIdExecutionResult> {
-  const existing = getWorldIdVerification(id);
+  const existing = await getWorldIdVerification(id);
   if (!existing) throw new ApiError(`World ID verification ${id} not found`, 404);
-  const liveToken = getToken(existing.tokenId);
-  const liveHolder = getHolder(existing.tokenId, existing.accountId);
+  const liveToken = await getToken(existing.tokenId);
+  const liveHolder = await getHolder(existing.tokenId, existing.accountId);
   if (
     existing.status !== "VERIFIED" &&
     existing.check === "selfie" &&
@@ -85,7 +85,7 @@ export async function executeWorldIdVerification(
     liveHolder.livenessState === "EXPIRED"
   ) {
     const message = "The Selfie renewal deadline expired before this proof was verified.";
-    failWorldIdVerification(id, "liveness_deadline_expired", message, true);
+    await failWorldIdVerification(id, "liveness_deadline_expired", message, true);
     throw new ApiError(message, 409);
   }
   if (existing.status === "VERIFIED") {
@@ -101,11 +101,11 @@ export async function executeWorldIdVerification(
     throw new ApiError("This World ID proof is already being verified.", 409);
   }
 
-  const claimed = claimWorldIdVerification(id);
+  const claimed = await claimWorldIdVerification(id);
   if (!claimed) throw new ApiError("This World ID proof could not be claimed for verification.", 409);
 
   try {
-    const queued = getWorldIdVerificationProof(id);
+    const queued = await getWorldIdVerificationProof(id);
     if (!queued?.proof) {
       throw new WorldProofError("The queued World ID proof is missing.", 409, "missing_proof");
     }
@@ -131,7 +131,7 @@ export async function executeWorldIdVerification(
     const nullifierHash = createHash("sha256")
       .update(result.nullifier.toLowerCase())
       .digest("hex");
-    const completion = completeWorldIdVerification(
+    const completion = await completeWorldIdVerification(
       id,
       result.credential,
       nullifierHash,
@@ -141,9 +141,9 @@ export async function executeWorldIdVerification(
       throw new ApiError(completion.message, 409);
     }
 
-    const verification = getWorldIdVerification(id)!;
+    const verification = (await getWorldIdVerification(id))!;
     const holder = await applyVerifiedCheck(verification);
-    insertEvent({
+    await insertEvent({
       tokenId: verification.tokenId,
       accountId: verification.accountId,
       type: "WORLDID_VERIFY",
@@ -161,7 +161,7 @@ export async function executeWorldIdVerification(
     if (error instanceof ApiError) throw error;
     if (error instanceof WorldProofError) {
       const definitive = error.status < 500;
-      failWorldIdVerification(
+      await failWorldIdVerification(
         id,
         error.code,
         [error.message, error.details].filter(Boolean).join(" · "),
@@ -174,7 +174,7 @@ export async function executeWorldIdVerification(
     }
 
     const message = error instanceof Error ? error.message : "Unknown World ID verification error";
-    failWorldIdVerification(id, "world_verification_internal_error", message, false);
+    await failWorldIdVerification(id, "world_verification_internal_error", message, false);
     throw error;
   }
 }

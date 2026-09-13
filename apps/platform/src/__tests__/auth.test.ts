@@ -1,4 +1,4 @@
-﻿import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 import {
   createAuthNonce,
   consumeAuthNonce,
@@ -12,35 +12,35 @@ import { getDb } from "@/lib/db/index";
 describe("Authentication Nonce Lifecycle", () => {
   const testAddress = "0x1111111111111111111111111111111111111111";
 
-  it("issues a nonce and permits single consumption", () => {
-    const nonce = createAuthNonce(testAddress);
+  it("issues a nonce and permits single consumption", async () => {
+    const nonce = await createAuthNonce(testAddress);
     expect(nonce).toBeDefined();
 
     // First consumption must succeed
-    const firstUse = consumeAuthNonce(nonce, testAddress);
+    const firstUse = await consumeAuthNonce(nonce, testAddress);
     expect(firstUse).toBe(true);
 
     // Immediate replay must fail
-    const replayUse = consumeAuthNonce(nonce, testAddress);
+    const replayUse = await consumeAuthNonce(nonce, testAddress);
     expect(replayUse).toBe(false);
   });
 
-  it("rejects nonce consumption for a mismatched address", () => {
-    const nonce = createAuthNonce(testAddress);
+  it("rejects nonce consumption for a mismatched address", async () => {
+    const nonce = await createAuthNonce(testAddress);
     const wrongAddress = "0x2222222222222222222222222222222222222222";
 
-    const consumed = consumeAuthNonce(nonce, wrongAddress);
+    const consumed = await consumeAuthNonce(nonce, wrongAddress);
     expect(consumed).toBe(false);
   });
 
-  it("rejects expired nonces", () => {
-    const nonce = createAuthNonce(testAddress);
+  it("rejects expired nonces", async () => {
+    const nonce = await createAuthNonce(testAddress);
     // Artificially expire the nonce in SQLite
     getDb()
       .prepare("UPDATE auth_nonces SET expires_at = ? WHERE nonce = ?")
       .run(Date.now() - 1000, nonce);
 
-    const consumed = consumeAuthNonce(nonce, testAddress);
+    const consumed = await consumeAuthNonce(nonce, testAddress);
     expect(consumed).toBe(false);
   });
 });
@@ -48,17 +48,17 @@ describe("Authentication Nonce Lifecycle", () => {
 describe("Authentication Session Lifecycle & Middleware", () => {
   const investorAddress = "0x3333333333333333333333333333333333333333";
 
-  it("creates an active session and resolves it correctly", () => {
-    const sessionId = createAuthSession({
+  it("creates an active session and resolves it correctly", async () => {
+    const sessionId = await createAuthSession({
       address: investorAddress,
       role: "investor",
       expiresAt: Date.now() + 3600000,
     });
 
-    const session = getAuthSession(sessionId);
+    const session = await getAuthSession(sessionId);
     expect(session).toBeDefined();
     expect(session?.role).toBe("investor");
-    expect(session?.revoked).toBe(0);
+    expect(session?.revoked).toBe(false);
 
     const mockReq = {
       cookies: {
@@ -69,20 +69,20 @@ describe("Authentication Session Lifecycle & Middleware", () => {
       },
     } as any;
 
-    const ctx = resolveAuthContext(mockReq);
+    const ctx = await resolveAuthContext(mockReq);
     expect(ctx).not.toBeNull();
     expect(ctx?.role).toBe("investor");
     expect(ctx?.address).toBe(investorAddress.toLowerCase());
   });
 
-  it("returns null when session is revoked", () => {
-    const sessionId = createAuthSession({
+  it("returns null when session is revoked", async () => {
+    const sessionId = await createAuthSession({
       address: investorAddress,
       role: "investor",
       expiresAt: Date.now() + 3600000,
     });
 
-    revokeAuthSession(sessionId);
+    await revokeAuthSession(sessionId);
 
     const mockReq = {
       cookies: {
@@ -93,12 +93,12 @@ describe("Authentication Session Lifecycle & Middleware", () => {
       },
     } as any;
 
-    const ctx = resolveAuthContext(mockReq);
+    const ctx = await resolveAuthContext(mockReq);
     expect(ctx).toBeNull();
   });
 
-  it("returns null when session has expired", () => {
-    const sessionId = createAuthSession({
+  it("returns null when session has expired", async () => {
+    const sessionId = await createAuthSession({
       address: investorAddress,
       role: "investor",
       expiresAt: Date.now() - 5000,
@@ -113,7 +113,7 @@ describe("Authentication Session Lifecycle & Middleware", () => {
       },
     } as any;
 
-    const ctx = resolveAuthContext(mockReq);
+    const ctx = await resolveAuthContext(mockReq);
     expect(ctx).toBeNull();
   });
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { BrowserProvider } from "ethers";
 import { useEvmWallet } from "@/hooks/useEvmWallet";
 import { getMetaMaskProvider } from "@/lib/evm/browserProvider";
@@ -23,9 +23,9 @@ async function parseSafeJson<T = any>(res: Response): Promise<T> {
     return JSON.parse(text) as T;
   } catch {
     if (!res.ok) {
-      throw new Error(`Server returned HTTP ${res.status} (${res.statusText || "Service Unavailable"})`);
+      throw new Error(`Request failed (${res.status}): ${text.slice(0, 160)}`);
     }
-    throw new Error("Invalid response format from server.");
+    return {} as T;
   }
 }
 
@@ -40,12 +40,7 @@ export function AgenticSafetyCockpit({ onWorkflowComplete }: AgenticSafetyCockpi
   const [error, setError] = useState<string | null>(null);
   const [isGraphModalOpen, setIsGraphModalOpen] = useState<boolean>(false);
 
-  // Fetch active session on mount
-  useEffect(() => {
-    fetchSession();
-  }, [evm.accountId]);
-
-  const fetchSession = async () => {
+  const fetchSession = useCallback(async () => {
     try {
       const url = evm.accountId
         ? `/api/agent/session?grantor=${encodeURIComponent(evm.accountId)}`
@@ -58,7 +53,11 @@ export function AgenticSafetyCockpit({ onWorkflowComplete }: AgenticSafetyCockpi
     } catch {
       // Fallback
     }
-  };
+  }, [evm.accountId]);
+
+  useEffect(() => {
+    fetchSession();
+  }, [fetchSession]);
 
   // 1. Grant/Rotate Session Key with EIP-712 Typed Signature (ERC-7579 standard)
   const handleGrantSessionKey = async () => {

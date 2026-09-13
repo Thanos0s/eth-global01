@@ -13,8 +13,8 @@ export const dynamic = "force-dynamic";
 export async function POST(req: Request, { params }: { params: Promise<{ tokenId: string }> }) {
   return handleRoute(async () => {
     const { tokenId } = await params;
-    const token = requireToken(tokenId);
-    const auth = requireInvestor(req);
+    const token = await requireToken(tokenId);
+    const auth = await requireInvestor(req);
 
     const { accountId, evmAddress } = registerHolderSchema.parse(await readJson<unknown>(req));
     const isEvmAddress = accountId.startsWith("0x");
@@ -42,12 +42,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ tokenId
       : accountId;
 
     const normalizedAccountId = token.blockchain === "EVM" ? getAddress(effectiveAccountId) : effectiveAccountId;
-    ensureHolder(tokenId, normalizedAccountId, token.blockchain === "EVM" ? normalizedAccountId : evmAddress);
+    await ensureHolder(tokenId, normalizedAccountId, token.blockchain === "EVM" ? normalizedAccountId : evmAddress);
     if (token.blockchain === "EVM") {
       // ERC-20 balances require no HTS-style association transaction.
-      updateHolder(tokenId, normalizedAccountId, { associated: true });
+      await updateHolder(tokenId, normalizedAccountId, { associated: true });
     }
 
-    return NextResponse.json({ holder: getHolder(tokenId, normalizedAccountId) }, { status: 201 });
+    return NextResponse.json({ holder: await getHolder(tokenId, normalizedAccountId) }, { status: 201 });
   });
 }

@@ -36,7 +36,7 @@ const url = `https://secure.shippingapis.com/ShippingAPI.dll?API=Verify&XML=${en
 
 let isValid = false;
 let dpvCode = "N";
-let normalizedAddress = `${street.trim().toUpperCase()}|${city.trim().toUpperCase()}|${state.trim().toUpperCase()}|${zip.trim()}`;
+const normalizedAddress = `${street.trim().toUpperCase()}|${city.trim().toUpperCase()}|${state.trim().toUpperCase()}|${zip.trim()}`;
 
 try {
   const uspsResponse = await Functions.makeHttpRequest({

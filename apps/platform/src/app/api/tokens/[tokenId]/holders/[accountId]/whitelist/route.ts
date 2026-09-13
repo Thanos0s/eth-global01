@@ -18,12 +18,12 @@ export async function POST(
   { params }: { params: Promise<{ tokenId: string; accountId: string }> }
 ) {
   checkRateLimit(getClientIp(req), 30);
-  const ctx = requireOperator(req);
+  const ctx = await requireOperator(req);
 
   return handleRoute(async () => {
     const { tokenId, accountId } = await params;
-    const token = requireToken(tokenId);
-    const holder = getHolder(tokenId, accountId);
+    const token = await requireToken(tokenId);
+    const holder = await getHolder(tokenId, accountId);
     if (!holder) throw new ApiError("Holder has not registered for this token yet.", 404);
     if (!holder.associated) throw new ApiError("Holder must associate the token to their account first.", 409);
     if (!hasRequiredWorldIdVerification(token, holder)) {
@@ -32,11 +32,11 @@ export async function POST(
 
     if (token.blockchain === "EVM") {
       const result = await setEvmApproved(tokenId, accountId, true);
-      updateHolder(tokenId, accountId, {
+      await updateHolder(tokenId, accountId, {
         kycGranted: token.compliance.kycRequired,
         frozen: false,
       });
-      insertEvent({
+      await insertEvent({
         tokenId,
         accountId,
         type: "GRANT_KYC",
@@ -46,20 +46,20 @@ export async function POST(
       });
       if (holder.frozen) {
         const unfreeze = await setEvmFrozen(tokenId, accountId, false);
-        insertEvent({ tokenId, accountId, type: "UNFREEZE", txId: unfreeze.txId, hashscanUrl: unfreeze.explorerUrl });
+        await insertEvent({ tokenId, accountId, type: "UNFREEZE", txId: unfreeze.txId, hashscanUrl: unfreeze.explorerUrl });
       }
     } else if (token.compliance.kycRequired) {
       const result = await grantKyc(tokenId, accountId);
-      updateHolder(tokenId, accountId, { kycGranted: true });
-      insertEvent({ tokenId, accountId, type: "GRANT_KYC", txId: result.txId, hashscanUrl: result.hashscanUrl });
+      await updateHolder(tokenId, accountId, { kycGranted: true });
+      await insertEvent({ tokenId, accountId, type: "GRANT_KYC", txId: result.txId, hashscanUrl: result.hashscanUrl });
     }
     if (token.blockchain === "HEDERA" && token.compliance.freezeDefault) {
       const result = await unfreezeAccount(tokenId, accountId);
-      updateHolder(tokenId, accountId, { frozen: false });
-      insertEvent({ tokenId, accountId, type: "UNFREEZE", txId: result.txId, hashscanUrl: result.hashscanUrl });
+      await updateHolder(tokenId, accountId, { frozen: false });
+      await insertEvent({ tokenId, accountId, type: "UNFREEZE", txId: result.txId, hashscanUrl: result.hashscanUrl });
     }
 
-    updateHolder(tokenId, accountId, { status: "WHITELISTED" });
-    return NextResponse.json({ holder: getHolder(tokenId, accountId) });
+    await updateHolder(tokenId, accountId, { status: "WHITELISTED" });
+    return NextResponse.json({ holder: await getHolder(tokenId, accountId) });
   });
 }

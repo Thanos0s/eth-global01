@@ -54,63 +54,63 @@ describe("Durable Agent Request Nonce & HMAC Replay Prevention", () => {
     });
   }
 
-  it("rejects request when secret is missing or mismatched", () => {
+  it("rejects request when secret is missing or mismatched", async () => {
     const req = new Request("http://localhost:3000/api/internal", {
       headers: { "x-tokenization-agent-secret": "wrong-secret" },
     });
-    expect(() => requireAgentRequest(req)).toThrowError(ApiError);
+    await expect(requireAgentRequest(req)).rejects.toThrowError(ApiError);
     try {
-      requireAgentRequest(req);
+      await requireAgentRequest(req);
     } catch (e: any) {
       expect(e.status).toBe(401);
       expect(e.message).toContain("secret mismatch");
     }
   });
 
-  it("rejects request when required headers (timestamp, nonce, hmac) are missing", () => {
+  it("rejects request when required headers (timestamp, nonce, hmac) are missing", async () => {
     const reqNoTs = createSignedRequest({ omitTimestamp: true });
-    expect(() => requireAgentRequest(reqNoTs)).toThrowError(ApiError);
+    await expect(requireAgentRequest(reqNoTs)).rejects.toThrowError(ApiError);
     try {
-      requireAgentRequest(reqNoTs);
+      await requireAgentRequest(reqNoTs);
     } catch (e: any) {
       expect(e.status).toBe(401);
       expect(e.message).toContain("Missing required agent HMAC, timestamp, or nonce headers");
     }
 
     const reqNoNonce = createSignedRequest({ omitNonce: true });
-    expect(() => requireAgentRequest(reqNoNonce)).toThrowError(ApiError);
+    await expect(requireAgentRequest(reqNoNonce)).rejects.toThrowError(ApiError);
 
     const reqNoHmac = createSignedRequest({ omitHmac: true });
-    expect(() => requireAgentRequest(reqNoHmac)).toThrowError(ApiError);
+    await expect(requireAgentRequest(reqNoHmac)).rejects.toThrowError(ApiError);
   });
 
-  it("rejects request with expired timestamp (>120s)", () => {
+  it("rejects request with expired timestamp (>120s)", async () => {
     const expiredTs = Date.now() - 130_000;
     const req = createSignedRequest({ timestamp: expiredTs });
-    expect(() => requireAgentRequest(req)).toThrowError(ApiError);
+    await expect(requireAgentRequest(req)).rejects.toThrowError(ApiError);
     try {
-      requireAgentRequest(req);
+      await requireAgentRequest(req);
     } catch (e: any) {
       expect(e.status).toBe(401);
       expect(e.message).toContain("outside allowed ±120s window");
     }
   });
 
-  it("rejects request with invalid HMAC signature", () => {
+  it("rejects request with invalid HMAC signature", async () => {
     const req = createSignedRequest({ tamperHmac: true });
-    expect(() => requireAgentRequest(req)).toThrowError(ApiError);
+    await expect(requireAgentRequest(req)).rejects.toThrowError(ApiError);
     try {
-      requireAgentRequest(req);
+      await requireAgentRequest(req);
     } catch (e: any) {
       expect(e.status).toBe(401);
       expect(e.message).toContain("HMAC verification failed");
     }
   });
 
-  it("accepts valid signed request and consumes nonce", () => {
+  it("accepts valid signed request and consumes nonce", async () => {
     const nonce = "valid_nonce_12345";
     const req = createSignedRequest({ nonce });
-    expect(() => requireAgentRequest(req)).not.toThrow();
+    await expect(requireAgentRequest(req)).resolves.not.toThrow();
 
     // Verify nonce exists in database
     const row = getDb()
@@ -119,25 +119,25 @@ describe("Durable Agent Request Nonce & HMAC Replay Prevention", () => {
     expect(row).toBeDefined();
   });
 
-  it("rejects replay of the same nonce with 409", () => {
+  it("rejects replay of the same nonce with 409", async () => {
     const nonce = "replay_nonce_test_001";
     const req1 = createSignedRequest({ nonce });
     const req2 = createSignedRequest({ nonce });
 
     // First request must succeed
-    expect(() => requireAgentRequest(req1)).not.toThrow();
+    await expect(requireAgentRequest(req1)).resolves.not.toThrow();
 
     // Second request with same nonce must be rejected with 409
-    expect(() => requireAgentRequest(req2)).toThrowError(ApiError);
+    await expect(requireAgentRequest(req2)).rejects.toThrowError(ApiError);
     try {
-      requireAgentRequest(req2);
+      await requireAgentRequest(req2);
     } catch (e: any) {
       expect(e.status).toBe(409);
       expect(e.message).toContain("replay rejected");
     }
   });
 
-  it("purges expired nonces automatically", () => {
+  it("purges expired nonces automatically", async () => {
     const db = getDb();
     const now = Date.now();
     // Insert an expired nonce and an active nonce directly
@@ -146,7 +146,7 @@ describe("Durable Agent Request Nonce & HMAC Replay Prevention", () => {
     db.prepare("INSERT INTO agent_request_nonces (nonce, expires_at, consumed_at) VALUES (?, ?, ?)")
       .run("active_nonce_1", now + 60000, now);
 
-    const purged = purgeExpiredAgentRequestNonces(now);
+    const purged = await purgeExpiredAgentRequestNonces(now);
     expect(purged).toBe(1);
 
     const expiredRow = db

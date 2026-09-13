@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   checkRateLimit(getClientIp(req), 30);
-  const ctx = requireOperator(req);
+  const ctx = await requireOperator(req);
 
   try {
     const body = (await req.json()) as StreamRecord;

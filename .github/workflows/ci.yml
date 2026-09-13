@@ -1,4 +1,4 @@
-﻿name: Prism 8 Production CI
+name: Prism 8 Production CI
 
 on:
   push:
@@ -29,12 +29,16 @@ jobs:
         run: npm run compile:contracts
         working-directory: apps/platform
 
+      - name: Lint Check
+        run: npm run lint
+        working-directory: apps/platform
+
       - name: Static Typecheck
         run: npm run typecheck
         working-directory: apps/platform
 
-      - name: Run Vitest Suite (Unit, Auth, Invariants)
-        run: npm test
+      - name: Run Full Test Suite (Vitest, Contracts, Subgraph)
+        run: npm run test:all
         working-directory: apps/platform
         env:
           DEMO_MODE: "true"

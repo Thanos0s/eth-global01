@@ -16,17 +16,17 @@ export async function POST(
 
   return handleRoute(async () => {
     const { tokenId, accountId } = await params;
-    requireInvestor(req, accountId);
-    requireToken(tokenId);
-    const holder = getHolder(tokenId, accountId);
+    await requireInvestor(req, accountId);
+    await requireToken(tokenId);
+    const holder = await getHolder(tokenId, accountId);
     if (!holder) throw new ApiError("Holder has not registered for this token.", 404);
 
     if (holder.activeScheduleId) {
       await cancelScheduledReclaim(holder.activeScheduleId);
-      updateHolder(tokenId, accountId, { activeScheduleId: null, activeScheduleExpiresAt: null });
-      insertEvent({ tokenId, accountId, type: "CANCEL_RECLAIM", detail: { reason: "manually cancelled" } });
+      await updateHolder(tokenId, accountId, { activeScheduleId: null, activeScheduleExpiresAt: null });
+      await insertEvent({ tokenId, accountId, type: "CANCEL_RECLAIM", detail: { reason: "manually cancelled" } });
     }
 
-    return NextResponse.json({ holder: getHolder(tokenId, accountId) });
+    return NextResponse.json({ holder: await getHolder(tokenId, accountId) });
   });
 }

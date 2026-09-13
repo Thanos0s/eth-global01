@@ -11,14 +11,15 @@ import { auditLog } from "@/lib/audit/logger";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  return handleRoute(async () =>
-    NextResponse.json({ tokens: listTokens().filter((token) => token.blockchain === "EVM") })
-  );
+  return handleRoute(async () => {
+    const tokens = await listTokens();
+    return NextResponse.json({ tokens: tokens.filter((token) => token.blockchain === "EVM") });
+  });
 }
 
 export async function POST(req: Request) {
   checkRateLimit(getClientIp(req), 30);
-  const ctx = requireOperator(req);
+  const ctx = await requireOperator(req);
 
   return handleRoute(async () => {
     const body = await readJson<Record<string, unknown>>(req);
@@ -31,7 +32,7 @@ export async function POST(req: Request) {
     let txId: string;
     let explorerUrl: string;
     let keys: any;
-    let treasuryAccountId = input.treasuryAccountId || getEvmOperatorAddress();
+    const treasuryAccountId = input.treasuryAccountId || getEvmOperatorAddress();
 
     if (input.existingTokenId && input.createTxId) {
       tokenId = input.existingTokenId;
@@ -62,7 +63,7 @@ export async function POST(req: Request) {
       keys = created.keys;
     }
 
-    const token = insertToken({
+    const token = await insertToken({
       id: tokenId,
       blockchain: "EVM",
       network: "sepolia",
@@ -82,7 +83,7 @@ export async function POST(req: Request) {
       createTxId: txId,
     });
 
-    insertEvent({
+    await insertEvent({
       tokenId: token.id,
       type: "CREATE_TOKEN",
       detail: {
@@ -99,8 +100,8 @@ export async function POST(req: Request) {
     // Ensure initial treasury holder exists
     try {
       const { ensureHolder, updateHolder } = await import("@/lib/db/repo");
-      ensureHolder(token.id, treasuryAccountId, treasuryAccountId);
-      updateHolder(token.id, treasuryAccountId, {
+      await ensureHolder(token.id, treasuryAccountId, treasuryAccountId);
+      await updateHolder(token.id, treasuryAccountId, {
         associated: true,
         kycGranted: true,
         status: "WHITELISTED",
