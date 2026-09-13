@@ -199,11 +199,16 @@ export async function POST(req: NextRequest) {
 
     // Step C: The Graph Dynamic Shareholder Discovery & Real Yield Math
     const propertyTokenAddress = "0x71C8401E25687352f20D235F8d7fD1A392cf99a8";
+    const liveStudioUrl =
+      process.env.SUBGRAPH_URL ||
+      "https://api.studio.thegraph.com/query/1760290/eth/version/latest";
+
     let graphAllocation: SubgraphAllocationResult;
     try {
       graphAllocation = await getLiveShareholderAllocation({
         tokenAddress: propertyTokenAddress,
         monthlyRentUsd: property.monthlyRent,
+        customUrl: liveStudioUrl,
       });
     } catch (graphErr: any) {
       console.warn("[Agent Mission] The Graph query notice:", graphErr.message || graphErr);
