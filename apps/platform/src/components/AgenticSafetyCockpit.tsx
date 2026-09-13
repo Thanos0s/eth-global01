@@ -501,97 +501,111 @@ export function AgenticSafetyCockpit({ onWorkflowComplete }: AgenticSafetyCockpi
           )}
 
           <div className="space-y-2">
-            {executionResult.steps?.map((step: any) => (
-              <div
-                key={step.stepNumber}
-                className="p-3 bg-white border border-neutral-300 text-xs space-y-1.5 hover:border-black transition"
-              >
-                {/* Step Header */}
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="font-bold text-black text-xs flex items-center gap-1.5">
-                    <span className="w-4 h-4 rounded-full bg-black text-white text-[10px] font-bold flex items-center justify-center shrink-0">
-                      {step.stepNumber}
+            {executionResult.steps?.map((step: any) => {
+              const isSettled =
+                step.status === "SETTLED_ON_CHAIN" ||
+                step.status === "IMMUTABLE_LOGGED" ||
+                step.status === "INDEXED_LIVE" ||
+                step.status === "STREAMING_ACTIVE" ||
+                step.status === "CONFIRMED";
+
+              return (
+                <div
+                  key={step.stepNumber}
+                  className="p-3.5 bg-white border border-neutral-300 text-xs space-y-2 hover:border-black transition"
+                >
+                  {/* Step Header */}
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="font-bold text-black text-xs flex items-center gap-2">
+                      <span className="w-5 h-5 rounded-full bg-black text-white text-[11px] font-bold flex items-center justify-center shrink-0">
+                        {step.stepNumber}
+                      </span>
+                      <span className="text-sm font-semibold">{step.name}</span>
+                    </div>
+                    <span
+                      className={`text-[9px] uppercase font-bold px-2 py-0.5 tracking-wider border flex items-center gap-1 ${
+                        isSettled
+                          ? "bg-black text-white border-black"
+                          : "bg-neutral-100 text-neutral-700 border-neutral-300"
+                      }`}
+                    >
+                      {isSettled && <span>✓</span>}
+                      <span>{step.status?.replace(/_/g, " ")}</span>
                     </span>
-                    <span>{step.name}</span>
-                  </div>
-                  <span className="text-[9px] uppercase font-bold px-1.5 py-0.5 border border-black bg-black text-white tracking-wider">
-                    {step.status}
-                  </span>
-                </div>
-
-                {/* Step Detail */}
-                <p className="text-[11px] text-neutral-600 leading-relaxed pl-5">
-                  {step.detail}
-                </p>
-
-                {/* Step Metadata & Verification Links */}
-                <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-neutral-100 pl-5 text-[11px]">
-                  <div className="text-neutral-500 flex items-center gap-1">
-                    <span>Network:</span>
-                    <span className="text-black font-semibold">{step.network}</span>
                   </div>
 
-                  <div className="flex items-center gap-1.5">
-                    {step.network?.includes("The Graph") ? (
-                      <div className="flex items-center gap-1.5">
-                        {step.txId && (
-                          <span className="text-neutral-500 font-mono text-[10px]">
-                            IPFS: {step.txId.slice(0, 14)}...
-                          </span>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => setIsGraphModalOpen(true)}
-                          className="px-2 py-0.5 bg-black text-white text-[10px] font-bold hover:bg-neutral-800 transition cursor-pointer flex items-center gap-1"
-                          title="Open interactive Subgraph Inspector Modal"
-                        >
-                          <span>🔍 Inspect Live</span>
-                        </button>
-                        <a
-                          href="/api/subgraph"
-                          target="_blank"
-                          rel="noreferrer"
-                          className="px-1.5 py-0.5 bg-neutral-100 hover:bg-neutral-200 border border-neutral-300 rounded text-black text-[10px] font-semibold"
-                          title="Open raw GraphQL API endpoint"
-                        >
-                          API JSON ↗
-                        </a>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-1.5">
-                        {step.txId ? (
-                          <>
+                  {/* Step Detail */}
+                  <p className="text-[11px] text-neutral-600 leading-relaxed pl-7">
+                    {step.detail}
+                  </p>
+
+                  {/* Step Metadata & Verification Links */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-neutral-100 pl-7 text-[11px]">
+                    <div className="text-neutral-500 flex items-center gap-1">
+                      <span>Network:</span>
+                      <span className="text-black font-semibold">{step.network}</span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      {step.network?.includes("The Graph") ? (
+                        <div className="flex items-center gap-1.5">
+                          {step.txId && (
                             <span className="text-neutral-500 font-mono text-[10px]">
-                              Tx: {step.txId.slice(0, 16)}...
+                              IPFS: {step.txId.slice(0, 14)}...
                             </span>
-                            {step.explorerUrl && (
-                              <a
-                                href={step.explorerUrl}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="px-2 py-0.5 bg-neutral-100 hover:bg-neutral-200 border border-neutral-300 text-black text-[10px] font-bold hover:border-black transition flex items-center gap-0.5"
-                              >
-                                <span>
-                                  {step.network?.includes("Hedera")
-                                    ? "HashScan ↗"
-                                    : step.network?.includes("Base")
-                                    ? "BaseScan ↗"
-                                    : "Explorer ↗"}
-                                </span>
-                              </a>
-                            )}
-                          </>
-                        ) : (
-                          <span className="text-neutral-500 font-mono text-[10px] italic">
-                            {step.status || "Pending Settlement"}
-                          </span>
-                        )}
-                      </div>
-                    )}
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => setIsGraphModalOpen(true)}
+                            className="px-2.5 py-1 bg-black text-white text-[10px] font-bold hover:bg-neutral-800 transition cursor-pointer flex items-center gap-1"
+                            title="Open interactive Subgraph Inspector Modal"
+                          >
+                            <span>🔍 Inspect Live</span>
+                          </button>
+                          <a
+                            href="/api/subgraph"
+                            target="_blank"
+                            rel="noreferrer"
+                            className="px-2 py-1 bg-neutral-100 hover:bg-neutral-200 border border-neutral-300 text-black text-[10px] font-semibold"
+                            title="Open raw GraphQL API endpoint"
+                          >
+                            API JSON ↗
+                          </a>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          {step.txId && (
+                            <span className="text-neutral-500 font-mono text-[10px]">
+                              Tx: {step.txId.slice(0, 18)}...
+                            </span>
+                          )}
+                          {step.explorerUrl ? (
+                            <a
+                              href={step.explorerUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="px-2.5 py-1 bg-black text-white text-[10px] font-bold hover:bg-neutral-800 transition flex items-center gap-1"
+                            >
+                              <span>
+                                {step.network?.includes("Hedera")
+                                  ? "HashScan ↗"
+                                  : step.network?.includes("Base")
+                                  ? "BaseScan ↗"
+                                  : "Explorer ↗"}
+                              </span>
+                            </a>
+                          ) : (
+                            <span className="text-neutral-500 font-mono text-[10px] italic">
+                              {step.status || "Pending Settlement"}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           <div className="p-2.5 bg-neutral-100 border border-neutral-300 text-[11px] text-black flex flex-col sm:flex-row sm:items-center justify-between gap-2">
