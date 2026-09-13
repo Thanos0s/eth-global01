@@ -136,8 +136,15 @@ export async function getLiveShareholderAllocation(options?: {
   const configuredUrl = options?.customUrl || getSubgraphUrl();
   const isLive = Boolean(configuredUrl && configuredUrl.startsWith("http"));
   const monthlyRent = options?.monthlyRentUsd ?? 3800;
-  const maxStaleness = options?.maxStalenessSeconds ?? 86400; // 24h max staleness default
-  const targetToken = (options?.tokenAddress || "0x71C8401E25687352f20D235F8d7fD1A392cf99a8").toLowerCase();
+  const defaultMaxStaleness = process.env.SUBGRAPH_MAX_STALENESS_SECONDS
+    ? parseInt(process.env.SUBGRAPH_MAX_STALENESS_SECONDS, 10)
+    : 31536000; // 365 days default to support testnet and syncing indexers
+  const maxStaleness = options?.maxStalenessSeconds ?? defaultMaxStaleness;
+  const targetToken = (
+    options?.tokenAddress ||
+    process.env.PROPERTY_TOKEN_ADDRESS ||
+    "0x10279e6333f9d0ee103f4715b8aaea75be61464c"
+  ).toLowerCase();
   const queryTimestamp = new Date().toISOString();
 
   // 1. In non-demo mode, fail closed if live Graph endpoint is not configured

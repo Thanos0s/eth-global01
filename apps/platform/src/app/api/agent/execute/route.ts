@@ -198,7 +198,9 @@ export async function POST(req: NextRequest) {
     });
 
     // Step C: The Graph Dynamic Shareholder Discovery & Real Yield Math
-    const propertyTokenAddress = "0x71C8401E25687352f20D235F8d7fD1A392cf99a8";
+    const propertyTokenAddress =
+      process.env.PROPERTY_TOKEN_ADDRESS ||
+      "0x10279e6333f9d0ee103f4715b8aaea75be61464c";
     const liveStudioUrl =
       process.env.SUBGRAPH_URL ||
       "https://api.studio.thegraph.com/query/1760290/eth/version/latest";
