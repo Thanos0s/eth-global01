@@ -1,13 +1,21 @@
-// SPDX-License-Identifier: MIT
+﻿// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {ERC20Pausable} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Pausable.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 
-/// @notice ERC-20 counterpart to the platform's HTS token policy.
-/// World ID proofs remain private and off-chain; the Hermes operator only writes
-/// the resulting allowlist/freeze decision to this contract.
+/**
+ * @title CompliantRwaToken
+ * @notice ERC-20 counterpart to the platform's HTS token policy for fractionalized real-estate.
+ *         Enforces transfer gating, account freeze, pausable trading, and compliance clawbacks.
+ *
+ * @dev LEGAL DISCLAIMER:
+ *      These smart contract controls provide technical enforcement mechanisms for token compliance.
+ *      They do NOT constitute legal securities advice or a substitute for formal regulatory filings
+ *      (such as Reg D / Reg S / MiCA) under applicable jurisdictions. Independent securities counsel
+ *      review and approval are mandatory prior to any mainnet real-money token distribution.
+ */
 contract CompliantRwaToken is ERC20, ERC20Pausable, AccessControl {
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     bytes32 public constant COMPLIANCE_ROLE = keccak256("COMPLIANCE_ROLE");
@@ -26,6 +34,10 @@ contract CompliantRwaToken is ERC20, ERC20Pausable, AccessControl {
     mapping(address account => bool) public frozen;
 
     bool private _recoveryInProgress;
+
+    event ApprovalUpdated(address indexed account, bool approved);
+    event FreezeUpdated(address indexed account, bool frozen);
+    event RecoveryExecuted(address indexed from, address indexed to, uint256 amount);
 
     error AccountNotApproved(address account);
     error AccountFrozen(address account);
@@ -70,6 +82,9 @@ contract CompliantRwaToken is ERC20, ERC20Pausable, AccessControl {
         return _tokenDecimals;
     }
 
+    /**
+     * @notice Mints new tokens up to the configured max supply cap.
+     */
     function mint(address to, uint256 amount) external onlyRole(MINTER_ROLE) {
         if (maxSupply != 0 && totalSupply() + amount > maxSupply) {
             revert MaxSupplyExceeded(totalSupply() + amount, maxSupply);
@@ -77,31 +92,48 @@ contract CompliantRwaToken is ERC20, ERC20Pausable, AccessControl {
         _mint(to, amount);
     }
 
+    /**
+     * @notice Updates the KYC/compliance approval status of an account.
+     */
     function setApproved(address account, bool value) external onlyRole(COMPLIANCE_ROLE) {
         approved[account] = value;
+        emit ApprovalUpdated(account, value);
     }
 
+    /**
+     * @notice Freezes or unfreezes an account under regulatory or legal instruction.
+     */
     function setFrozen(address account, bool value) external onlyRole(COMPLIANCE_ROLE) {
         if (!freezeEnabled) revert FreezeDisabled();
         frozen[account] = value;
+        emit FreezeUpdated(account, value);
     }
 
+    /**
+     * @notice Emergency pauses all token transfers.
+     */
     function pause() external onlyRole(PAUSER_ROLE) {
         if (!pauseEnabled) revert PauseDisabled();
         _pause();
     }
 
+    /**
+     * @notice Resumes token transfers.
+     */
     function unpause() external onlyRole(PAUSER_ROLE) {
         if (!pauseEnabled) revert PauseDisabled();
         _unpause();
     }
 
-    /// @notice Emergency/admin clawback matching HTS wipe semantics.
+    /**
+     * @notice Emergency/admin clawback matching HTS wipe semantics. Transfers tokens from a non-compliant account to treasury.
+     */
     function recover(address from, uint256 amount) external onlyRole(RECOVERY_ROLE) {
         if (!recoveryEnabled) revert RecoveryDisabled();
         _recoveryInProgress = true;
         _transfer(from, treasury, amount);
         _recoveryInProgress = false;
+        emit RecoveryExecuted(from, treasury, amount);
     }
 
     function _update(address from, address to, uint256 value) internal override(ERC20, ERC20Pausable) {

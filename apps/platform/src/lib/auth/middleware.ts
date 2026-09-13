@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 import { getAuthSession } from "@/lib/db/repo";
-import { ApiError } from "@/lib/api/helpers";
+import { ApiError, requireAgentRequest } from "@/lib/api/helpers";
 import type { AuthContext } from "./roles";
 
 function extractSessionId(req: Request | NextRequest): string | null {
@@ -67,7 +67,6 @@ export function requireInvestor(
 export function requireOperatorOrAgent(req: Request | NextRequest): AuthContext {
   // Try agent secret first
   try {
-    const { requireAgentRequest } = require("@/lib/api/helpers");
     requireAgentRequest(req);
     return {
       role: "agent" as any,
