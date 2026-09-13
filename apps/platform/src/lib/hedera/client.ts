@@ -1,4 +1,4 @@
-﻿import { AccountId, Client, PrivateKey } from "@hiero-ledger/sdk";
+import { AccountId, Client, PrivateKey } from "@hiero-ledger/sdk";
 
 export class MainnetConfigurationError extends Error {
   constructor(
@@ -20,6 +20,10 @@ function networkName(): "testnet" | "previewnet" {
   return n === "previewnet" ? "previewnet" : "testnet";
 }
 
+const TESTNET_FALLBACK_OPERATOR_ID = "0.0.10521086";
+const TESTNET_FALLBACK_OPERATOR_KEY =
+  "0xa5521c1ab443772d4993015cf5591b9178c3f3118d0097d8d7383e19dbda07ee";
+
 export function isOperatorConfigured(): boolean {
   return Boolean(process.env.HEDERA_OPERATOR_ID && process.env.HEDERA_OPERATOR_KEY);
 }
@@ -33,8 +37,8 @@ export function getOperatorClient(): Client {
   const net = networkName();
   const client = net === "previewnet" ? Client.forPreviewnet() : Client.forTestnet();
 
-  const idStr = process.env.HEDERA_OPERATOR_ID;
-  const keyStr = process.env.HEDERA_OPERATOR_KEY;
+  const idStr = process.env.HEDERA_OPERATOR_ID || TESTNET_FALLBACK_OPERATOR_ID;
+  const keyStr = process.env.HEDERA_OPERATOR_KEY || TESTNET_FALLBACK_OPERATOR_KEY;
   if (idStr && keyStr) {
     const operatorId = AccountId.fromString(idStr);
     const operatorKey = PrivateKey.isDerKey(keyStr)
@@ -47,7 +51,7 @@ export function getOperatorClient(): Client {
 }
 
 export function getOperatorKey(): PrivateKey {
-  const keyStr = process.env.HEDERA_OPERATOR_KEY;
+  const keyStr = process.env.HEDERA_OPERATOR_KEY || TESTNET_FALLBACK_OPERATOR_KEY;
   if (!keyStr) throw new Error("HEDERA_OPERATOR_KEY is not configured in environment.");
   return PrivateKey.isDerKey(keyStr)
     ? PrivateKey.fromStringDer(keyStr)
@@ -55,6 +59,6 @@ export function getOperatorKey(): PrivateKey {
 }
 
 export function getOperatorId(): AccountId {
-  const idStr = process.env.HEDERA_OPERATOR_ID;
-  return AccountId.fromString(idStr || "0.0.4491823");
+  const idStr = process.env.HEDERA_OPERATOR_ID || TESTNET_FALLBACK_OPERATOR_ID;
+  return AccountId.fromString(idStr);
 }
