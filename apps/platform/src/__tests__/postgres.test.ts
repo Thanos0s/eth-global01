@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { newDb } from "pg-mem";
 import { PostgresAdapter } from "@/lib/db/postgresAdapter";
 
@@ -16,6 +16,12 @@ describe("Production PostgreSQL Database Layer Integration", () => {
     adapter = new PostgresAdapter(pool);
     // Execute transactional migrations
     await adapter.init();
+  });
+
+  afterAll(async () => {
+    if (pool) {
+      await pool.end().catch(() => {});
+    }
   });
 
   it("1. Initializes and verifies transactional migrations and healthy PostgreSQL status", async () => {
