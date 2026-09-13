@@ -14,9 +14,9 @@ Prism 8 uses ERC-7579-style scoped session authority and EIP-712 policy signing.
 
 ## Live proof path
 
-1. Sign a bounded session in the Hermes Mission Cockpit.
-2. Run the autonomous x402 property-verification mission on Hedera Testnet and inspect its HCS audit result.
-3. Trigger the rogue-action simulation and show the enforced rejection.
+1. Sign a bounded session in the Hermes Mission Cockpit (ERC-7579 EIP-712 scoped policy).
+2. Run the autonomous x402 property-verification mission on Hedera Testnet (`0.5 HBAR` micropayment) and inspect its mirror-node verified settlement and HCS audit receipt (Topic `0.0.10522243`).
+3. Trigger the rogue-action simulation and show the enforced cryptographic rejection (`HTTP 403 Forbidden`).
 4. Show The Graph holder data and the Superfluid yield panel as downstream utility.
 
 ## System map
@@ -30,9 +30,9 @@ Prism 8 uses ERC-7579-style scoped session authority and EIP-712 policy signing.
 
 ## Engineering evidence
 
-- 80 Vitest tests currently pass, including 18 ERC-7579/ERC-4337 behavioral integration tests.
-- TypeScript typecheck and ESLint pass.
-- Contracts compile as part of the production build workflow.
+- **76 Vitest tests passing** with 0 failures, including 14 dedicated x402 payment challenge, Mirror Node settlement verification, and invoice replay protection tests.
+- **Live Hedera Testnet verification script**: `node scripts/verify-hedera-x402-live.mjs` executing real on-chain transfers, Mirror Node verification, HCS audit logging, and replay rejection.
+- **Strict TypeScript typecheck (`tsc --noEmit`) and Smart Contract compilation** pass with 0 errors.
 
 ## Honest scope
 

@@ -22,17 +22,31 @@
         "required": ["street", "city", "state", "zip"]
       },
       "pricing": {
-        "model": "metered_per_call",
+        "model": "metered_tiered_per_call",
         "network": "hedera-testnet",
         "facilitator": "blocky402",
-        "cost": "0.5 HBAR",
-        "tinybars": 50000000,
-        "acceptedTokens": ["HBAR", "0.0.USDC_HTS"],
-        "settlement": "instant"
+        "defaultCost": "0.5 HBAR",
+        "defaultTinybars": 50000000,
+        "tiers": {
+          "STANDARD_DPV": {
+            "cost": "0.5 HBAR",
+            "tinybars": 50000000,
+            "description": "Standard USPS normalization, delivery point validation, and cryptographic address hashing."
+          },
+          "PREMIUM_DPV": {
+            "cost": "1.0 HBAR",
+            "tinybars": 100000000,
+            "description": "Full delivery point viability, physical deliverability confirmation, and premium HCS anchor."
+          }
+        },
+        "acceptedTokens": ["HBAR", "0.0.0"],
+        "settlement": "instant_hedera_transfer",
+        "verification": "Hedera Mirror Node Consensus API + Blocky402 Facilitator Protocol"
       },
       "audit": {
         "mechanism": "HCS",
-        "description": "Every settlement publishes an unforgeable consensus receipt on Hedera Consensus Service."
+        "topicId": "0.0.10522243",
+        "description": "Every settlement publishes an unforgeable consensus receipt on Hedera Consensus Service Topic 0.0.10522243."
       }
     }
   ]

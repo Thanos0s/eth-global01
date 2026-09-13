@@ -6,6 +6,7 @@ import {
   getSessionById,
 } from "@/lib/hermes/sessionPolicy";
 import { logHcsAuditEvent } from "@/lib/hedera/hcsAudit";
+import { handlePropertyOracleRequest } from "@/lib/x402/oracleService";
 import { getOperatorClient, getOperatorId, getOperatorKey } from "@/lib/hedera/client";
 import { hashscanTxUrl } from "@/lib/hedera/format";
 import { requireOperatorOrAgent } from "@/lib/auth/middleware";
@@ -125,7 +126,14 @@ export async function POST(req: NextRequest) {
     const executionId = `exec_${Date.now()}_${crypto.randomBytes(3).toString("hex")}`;
     const steps: any[] = [];
 
-    // Step A: Real on-chain x402 Micropayment Settlement on Hedera Testnet
+    // Step A: Request x402 Payment Challenge from Property Oracle
+    const challengeRes = await handlePropertyOracleRequest(property);
+    if (challengeRes.status !== 402 || !challengeRes.x402) {
+      throw new Error("Failed to receive valid x402 payment challenge from Property Oracle.");
+    }
+    const x402Challenge = challengeRes.x402;
+
+    // Step B: Settle x402 Micropayment on Hedera Testnet
     let paymentTxId: string | null = null;
     let paymentExplorerUrl: string | null = null;
 
@@ -133,11 +141,12 @@ export async function POST(req: NextRequest) {
       const hederaClient = getOperatorClient();
       const operatorKey = getOperatorKey();
       const operatorId = getOperatorId();
+      const payeeId = AccountId.fromString(x402Challenge.payee || "0.0.10521086");
 
       const transferTx = await new TransferTransaction()
         .addHbarTransfer(operatorId, new Hbar(-0.0001))
-        .addHbarTransfer(AccountId.fromString("0.0.4491823"), new Hbar(0.0001))
-        .setTransactionMemo("x402 USPS Oracle Micropayment Settlement (ERC-7579)")
+        .addHbarTransfer(payeeId, new Hbar(0.0001))
+        .setTransactionMemo(`x402:${x402Challenge.invoiceId}`)
         .freezeWith(hederaClient);
       const signedTransfer = await transferTx.sign(operatorKey);
       const transferResp = await signedTransfer.execute(hederaClient);
@@ -147,10 +156,17 @@ export async function POST(req: NextRequest) {
         paymentTxId = transferResp.transactionId.toString();
         paymentExplorerUrl = hashscanTxUrl(paymentTxId);
       }
-    } catch (err) {
-      console.warn("[agent execute] Live x402 transfer error, fallback:", err);
-      paymentTxId = `0.0.10521086@${Math.floor(Date.now() / 1000)}.000000000`;
-      paymentExplorerUrl = hashscanTxUrl(paymentTxId);
+    } catch (err: any) {
+      if (isDemoMode()) {
+        paymentTxId = `0.0.10521086@${Math.floor(Date.now() / 1000)}.000000000`;
+        paymentExplorerUrl = hashscanTxUrl(paymentTxId);
+      } else {
+        throw new Error(`Failed to settle on-chain x402 micropayment on Hedera Testnet: ${err.message || err}`);
+      }
+    }
+
+    if (!paymentTxId) {
+      throw new Error("Hedera testnet payment failed to produce transaction receipt.");
     }
 
     steps.push({
@@ -160,33 +176,31 @@ export async function POST(req: NextRequest) {
       status: "SETTLED_ON_CHAIN",
       txId: paymentTxId,
       explorerUrl: paymentExplorerUrl,
-      detail: `Settled 0.5 HBAR micropayment via Blocky402 facilitator under delegated Session Key allowance (${session.grantor.slice(0, 10)}...).`,
+      detail: `Settled ${x402Challenge.displayAmount} micropayment via Blocky402 facilitator under delegated Session Key allowance (${session.grantor.slice(0, 10)}...).`,
       timestamp: new Date().toISOString(),
     });
 
-    // Step B: Hedera Consensus Service (HCS) Audit Logging
-    const addressHash = `0x${crypto.createHash("sha256").update(`${property.street}|${property.city}|${property.state}|${property.zip}`).digest("hex")}`;
-    const hcsReceipt = await logHcsAuditEvent({
-      event: "ORACLE_USPS_VERIFIED",
-      propertyId: "0.0.10522243",
-      amount: "0.5 HBAR",
-      txId: paymentTxId || `session_exec_${Date.now()}`,
-      metadata: {
-        addressHash,
-        dpvConfirmation: "Y",
-        sessionGrantor: session.grantor,
-      },
+    // Step C: Fulfill Oracle Request & Log Verifiable HCS Audit
+    const oracleResult = await handlePropertyOracleRequest(property, {
+      paymentTx: paymentTxId,
+      invoiceId: x402Challenge.invoiceId,
     });
+
+    if (oracleResult.status !== 200 || !oracleResult.data) {
+      throw new Error(`Property Oracle rejected payment proof: ${oracleResult.error || "Verification failed"}`);
+    }
+
+    const hcsAudit = oracleResult.data.hcsAudit;
 
     steps.push({
       stepNumber: 2,
       name: "Hedera Consensus Service (HCS) Audit Anchor",
-      network: `Hedera Testnet (HCS Topic ${hcsReceipt.topicId})`,
+      network: `Hedera Testnet (HCS Topic ${hcsAudit.topicId})`,
       status: "IMMUTABLE_LOGGED",
-      txId: hcsReceipt.txId || null,
-      sequenceNumber: hcsReceipt.sequenceNumber,
-      explorerUrl: hcsReceipt.hashscanUrl || null,
-      detail: `Consensus sequence #${hcsReceipt.sequenceNumber} anchored on HCS Topic ${hcsReceipt.topicId}.`,
+      txId: hcsAudit.txId || paymentTxId,
+      sequenceNumber: hcsAudit.sequenceNumber,
+      explorerUrl: hcsAudit.hashscanUrl || paymentExplorerUrl,
+      detail: `Consensus sequence #${hcsAudit.sequenceNumber} anchored on HCS Topic ${hcsAudit.topicId}.`,
       timestamp: new Date().toISOString(),
     });
 
@@ -276,7 +290,7 @@ export async function POST(req: NextRequest) {
       sessionId,
       property: {
         address: `${property.street}, ${property.city}, ${property.state} ${property.zip}`,
-        addressHash,
+        addressHash: oracleResult.data.addressHash,
         dpvConfirmation: "Y",
       },
       sessionProof: {

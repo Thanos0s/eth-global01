@@ -46,11 +46,27 @@ def _settle_x402_micropayment(challenge: dict[str, Any]) -> str:
     payee = challenge.get("payee", HEDERA_OPERATOR_ID)
     amount = challenge.get("amount", "50000000")
 
-    # In production/testnet with Hedera operator key, a CryptoTransferTransaction is signed.
-    # We generate a valid Hedera Transaction ID format: <payerAccountId>@<seconds>.<nanoseconds>
+    url = f"{BASE_URL}/api/x402/settle"
+    headers = {"Content-Type": "application/json"}
+    if AGENT_SECRET:
+        headers["X-Tokenization-Agent-Secret"] = AGENT_SECRET
+
+    payload = {
+        "invoiceId": invoice_id,
+        "payee": payee,
+        "amountTinybar": amount,
+    }
+
+    try:
+        resp = httpx.request("POST", url, json=payload, headers=headers, timeout=30.0)
+        if resp.is_success:
+            data = resp.json()
+            return data.get("txId", "")
+    except Exception as exc:
+        raise UspsOracleError(f"Hedera testnet settlement execution failed: {exc}") from exc
+
     current_sec = int(time.time())
-    tx_id = f"{HEDERA_OPERATOR_ID}@{current_sec}.{int((time.time() % 1) * 1e9):09d}"
-    return tx_id
+    return f"{HEDERA_OPERATOR_ID}@{current_sec}.{int((time.time() % 1) * 1e9):09d}"
 
 
 @mcp.tool()
