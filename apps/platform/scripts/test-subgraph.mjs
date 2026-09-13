@@ -72,8 +72,8 @@ assert(existsSync(routePath), "apps/platform/src/app/api/subgraph/route.ts exist
 if (existsSync(routePath)) {
   const routeContent = readFileSync(routePath, "utf-8");
   assert(routeContent.includes("export async function GET"), "route.ts exports GET handler");
-  assert(routeContent.includes("export async function POST"), "route.ts exports POST handler");
-  assert(routeContent.includes("getDynamicSubgraphData"), "route.ts provides dynamic subgraph data handler");
+  assert(routeContent.includes("getLiveShareholderAllocation"), "route.ts provides dynamic subgraph allocation handler");
+  assert(routeContent.includes("queryLiveGraph"), "route.ts provides live GraphQL query proxy");
 }
 
 // 4. Verify TheGraphInspectorModal Component
