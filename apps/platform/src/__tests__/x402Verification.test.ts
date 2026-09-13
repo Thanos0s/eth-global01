@@ -290,5 +290,41 @@ describe("x402 Hedera Agentic Payments & Settlement Verification", () => {
       expect(replayRes.status).toBe(400);
       expect(replayRes.error).toContain("already been consumed");
     });
+
+    it("handles pre-settled invoice from facilitator without double-spend collision", async () => {
+      const initial = await handlePropertyOracleRequest(validAddress);
+      const invoiceId = initial.x402!.invoiceId;
+      const txId = "0.0.10521086@1789302999.123456789";
+
+      // Mark settled as if /api/x402/settle executed it
+      markInvoiceSettled(invoiceId, txId);
+
+      // Fulfilling with the same settled txId should succeed seamlessly
+      const fulfilled = await handlePropertyOracleRequest(validAddress, {
+        paymentTx: txId,
+        invoiceId,
+      });
+
+      expect(fulfilled.status).toBe(200);
+      expect(fulfilled.data?.paymentProof.txId).toBe(txId);
+      expect(fulfilled.data?.dpvConfirmation).toBe("Y");
+    });
+
+    it("facilitates and settles EVM signature proof on Hedera Testnet when operator is configured", async () => {
+      const initial = await handlePropertyOracleRequest(validAddress);
+      const invoiceId = initial.x402!.invoiceId;
+      const evmSig = "0x21f9ea865ecd00bc76f675ba5927a9194f9ea39e33fe9b26b1b3c7e2fc26dcd617dc0286bbb6d11d7cfbe59225247dd6d922a516595c80c1609410c370b6b4661b";
+
+      const res = await handlePropertyOracleRequest(validAddress, {
+        paymentTx: evmSig,
+        invoiceId,
+      });
+
+      // The facilitator accepts the EVM authorization and settles on Hedera
+      expect(res.status).toBe(200);
+      expect(res.data?.isValid).toBe(true);
+      expect(res.data?.dpvConfirmation).toBe("Y");
+      expect(res.data?.paymentProof.txId).toMatch(/^0\.0\.\d+@\d+\.\d+$/);
+    });
   });
 });

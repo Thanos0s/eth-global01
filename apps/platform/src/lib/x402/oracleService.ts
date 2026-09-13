@@ -1,4 +1,4 @@
-﻿import crypto from "node:crypto";
+import crypto from "node:crypto";
 import { logHcsAuditEvent } from "@/lib/hedera/hcsAudit";
 import {
   createInvoice,
@@ -170,7 +170,7 @@ export async function handlePropertyOracleRequest(
     };
   }
 
-  if (isTxAlreadyUsed(proof.paymentTx)) {
+  if (isTxAlreadyUsed(proof.paymentTx) && invoice.settlementTxId !== proof.paymentTx) {
     return {
       status: 400,
       error: `Transaction '${proof.paymentTx}' has already been settled for another request. Double-spend rejected.`,
@@ -231,7 +231,7 @@ export async function handlePropertyOracleRequest(
       addressHash,
       pricingTier: invoice.pricingTier,
       paymentProof: {
-        txId: proof.paymentTx,
+        txId: verification.txId || proof.paymentTx,
         invoiceId: invoice.invoiceId,
         payerAccountId: verification.payerAccountId,
         payeeAccountId: verification.payeeAccountId,

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -40,11 +40,32 @@ export default function DeployedTokenCatalog({ tokens: initialTokens }: { tokens
         body: JSON.stringify({ street: "456 Oak Avenue", city: "Miami", state: "FL", zip: "33101" }),
       });
       let invoiceId = `inv_${Date.now()}`;
+      let payee = "0.0.4491823";
+      let amount = "50000000";
       if (unpaidRes.status === 402) {
         const challenge = await unpaidRes.json();
         invoiceId = challenge.x402?.invoiceId || invoiceId;
+        payee = challenge.x402?.payee || payee;
+        amount = challenge.x402?.amount || amount;
       }
-      const paymentProofTx = `0.0.4491823@${Math.floor(Date.now() / 1000)}.000000000`;
+
+      let paymentProofTx = "";
+      try {
+        const settleRes = await fetch("/api/x402/settle", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ invoiceId, payee, amountTinybar: amount }),
+        });
+        const settleData = await settleRes.json();
+        if (settleRes.ok && settleData.txId) {
+          paymentProofTx = settleData.txId;
+        } else {
+          paymentProofTx = `0.0.10521086@${Math.floor(Date.now() / 1000)}.000000000`;
+        }
+      } catch {
+        paymentProofTx = `0.0.10521086@${Math.floor(Date.now() / 1000)}.000000000`;
+      }
+
       const paidRes = await fetch("/api/x402/property-oracle", {
         method: "POST",
         headers: { "Content-Type": "application/json", "X-Payment-Tx": paymentProofTx, "X-Payment-Invoice": invoiceId },

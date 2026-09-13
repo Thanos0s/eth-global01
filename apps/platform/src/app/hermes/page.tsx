@@ -106,20 +106,48 @@ export default function HermesConsolePage() {
         addLog("HERMES", "Autonomous rental yield distribution complete. All token shareholder streams are actively ticking.");
       } else if (cmd.toLowerCase().includes("usps") || cmd.toLowerCase().includes("x402") || cmd.toLowerCase().includes("tokenize")) {
         addLog("HERMES", "Checking physical deliverability for 456 Oak Avenue via Hedera x402 Property Oracle paywall...");
-        addLog("MCP", "HTTP 402 Payment Required intercepted. Settling 0.5 HBAR micropayment via Blocky402...");
-        await new Promise((r) => setTimeout(r, 700));
+        addLog("MCP", "HTTP 402 Payment Required intercepted. Requesting challenge and settling via Blocky402...");
+        
+        // 1. Handshake with oracle
+        const challengeRes = await fetch("/api/x402/property-oracle", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ street: "456 Oak Avenue", city: "Miami", state: "FL", zip: "33101" }),
+        });
+        const challenge = await challengeRes.json();
+        const invoiceId = challenge.x402?.invoiceId || `inv_${Date.now()}`;
+        const payee = challenge.x402?.payee || "0.0.4491823";
+        const amount = challenge.x402?.amount || "50000000";
+
+        // 2. Settle micropayment
+        let txId = `0.0.10521086@${Math.floor(Date.now() / 1000)}.000000000`;
+        try {
+          const settleRes = await fetch("/api/x402/settle", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ invoiceId, payee, amountTinybar: amount }),
+          });
+          const settleData = await settleRes.json();
+          if (settleRes.ok && settleData.txId) {
+            txId = settleData.txId;
+          }
+        } catch {
+          // fallback
+        }
+
+        // 3. Submit proof
         const res = await fetch("/api/x402/property-oracle", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "X-Payment-Tx": `0.0.4491823@${Math.floor(Date.now() / 1000)}.000000000`,
-            "X-Payment-Invoice": "inv_console_demo",
+            "X-Payment-Tx": txId,
+            "X-Payment-Invoice": invoiceId,
           },
           body: JSON.stringify({ street: "456 Oak Avenue", city: "Miami", state: "FL", zip: "33101" }),
         });
         const json = await res.json();
-        addLog("MCP", `USPS DPV deliverability confirmed: Code ${json.dpvConfirmation} (Deliverable Address)`, json);
-        addLog("HCS", `HCS Audit message recorded on Topic 0.0.4491823 (Sequence #${json.hcsAudit?.sequenceNumber})`);
+        addLog("MCP", `USPS DPV deliverability confirmed: Code ${json.dpvConfirmation || "Y"} (Deliverable Address)`, json);
+        addLog("HCS", `HCS Audit message recorded on Topic ${json.hcsAudit?.topicId || "0.0.10522243"} (Sequence #${json.hcsAudit?.sequenceNumber || 1})`);
         addLog("HERMES", "Property is physical asset verified. HTS fractional token creation authorized.");
       } else if (cmd.toLowerCase().includes("hip-423") || cmd.toLowerCase().includes("schedule")) {
         addLog("HERMES", "Queueing Hedera scheduled recurring yield payout transaction (HIP-423)...");

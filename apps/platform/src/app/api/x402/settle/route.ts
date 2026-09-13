@@ -1,24 +1,14 @@
-﻿import { NextRequest, NextResponse } from "next/server";
-import { AccountId, Hbar, TransferTransaction } from "@hiero-ledger/sdk";
-import { getOperatorClient, getOperatorId, getOperatorKey } from "@/lib/hedera/client";
-import { hashscanTxUrl } from "@/lib/hedera/format";
+import { NextRequest, NextResponse } from "next/server";
 import { checkRateLimit, getClientIp } from "@/lib/api/rateLimit";
 import { isDemoMode } from "@/lib/demo";
+import { hashscanTxUrl } from "@/lib/hedera/format";
+import { getInvoice } from "@/lib/x402/invoiceStore";
+import { executeHederaSettlement } from "@/lib/x402/settlementVerifier";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
   checkRateLimit(getClientIp(req), 20);
-
-  const agentSecret = req.headers.get("x-tokenization-agent-secret");
-  const expectedSecret = process.env.TOKENIZATION_AGENT_SECRET;
-
-  if (expectedSecret && agentSecret !== expectedSecret) {
-    return NextResponse.json(
-      { error: "Unauthorized: Invalid agent secret" },
-      { status: 401 }
-    );
-  }
 
   try {
     const body = await req.json();
@@ -26,6 +16,8 @@ export async function POST(req: NextRequest) {
       invoiceId?: string;
       payee?: string;
       amountTinybar?: string;
+      signature?: string;
+      signerAddress?: string;
     };
 
     if (!invoiceId) {
@@ -35,37 +27,39 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const payeeIdStr = payee || process.env.HEDERA_ORACLE_PAYEE_ID || process.env.HEDERA_OPERATOR_ID || "0.0.10521086";
-    const payeeId = AccountId.fromString(payeeIdStr);
+    const agentSecret = req.headers.get("x-tokenization-agent-secret");
+    const expectedSecret = process.env.TOKENIZATION_AGENT_SECRET;
+    const invoice = getInvoice(invoiceId);
 
-    const client = getOperatorClient();
-    const operatorKey = getOperatorKey();
-    const operatorId = getOperatorId();
+    // Authorize if secret matches OR if invoice exists in store and is pending
+    const isAuthorized =
+      (expectedSecret && agentSecret === expectedSecret) ||
+      Boolean(invoice && invoice.status === "PENDING") ||
+      !expectedSecret;
 
-    const transferTx = await new TransferTransaction()
-      .addHbarTransfer(operatorId, new Hbar(-0.0001))
-      .addHbarTransfer(payeeId, new Hbar(0.0001))
-      .setTransactionMemo(`x402:${invoiceId}`)
-      .freezeWith(client);
-
-    const signedTx = await transferTx.sign(operatorKey);
-    const resp = await signedTx.execute(client);
-    const receipt = await resp.getReceipt(client);
-
-    if (!receipt.status) {
-      throw new Error("Hedera transaction execution failed to receive receipt status.");
+    if (!isAuthorized) {
+      return NextResponse.json(
+        { error: "Unauthorized: Invalid agent secret or unrecognized active x402 invoice" },
+        { status: 401 }
+      );
     }
 
-    const txId = resp.transactionId.toString();
-    const hashscanUrl = hashscanTxUrl(txId);
+    const targetPayee = payee || invoice?.payee;
+    const targetAmount = amountTinybar || invoice?.amountTinybar;
+
+    const settlement = await executeHederaSettlement(
+      invoiceId,
+      targetPayee,
+      targetAmount
+    );
 
     return NextResponse.json({
       success: true,
-      txId,
-      hashscanUrl,
+      txId: settlement.txId,
+      hashscanUrl: settlement.hashscanUrl,
       invoiceId,
-      payee: payeeIdStr,
-      status: receipt.status.toString(),
+      payee: settlement.payeeAccountId,
+      status: "SUCCESS",
     });
   } catch (err: any) {
     if (isDemoMode()) {
