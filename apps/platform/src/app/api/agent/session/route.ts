@@ -34,12 +34,14 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { grantor, signature, constraints, nonce, chainId } = body as {
+    const { grantor, signature, constraints, nonce, chainId, validUntil, rawMessage } = body as {
       grantor: string;
       signature: string;
       constraints?: Partial<SessionPolicyConstraints>;
       nonce?: number;
       chainId?: number;
+      validUntil?: number;
+      rawMessage?: string;
     };
 
     if (!grantor || !signature) {
@@ -58,7 +60,9 @@ export async function POST(req: NextRequest) {
       signature,
       constraints,
       policyNonce,
-      chainId
+      chainId,
+      validUntil,
+      rawMessage
     );
 
     auditLog({
